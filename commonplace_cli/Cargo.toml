@@ -1,0 +1,10 @@
+[package]
+name = "commonplace_cli"
+version = "0.0.0"
+authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
+edition = "2018"
+
+[dependencies]
+libcommonplace = { path = "../libcommonplace" }
+structopt = "0.3.19"
+uuid = { version = "0.8.1", features = [ "v4" ] }

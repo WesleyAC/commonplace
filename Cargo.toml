@@ -1,12 +1,3 @@
-[package]
-name = "commonplace"
-version = "0.0.0"
-authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
-edition = "2018"
+[workspace]
 
-[dependencies]
-rusqlite = { version = "0.24.1", features = [ "bundled", "uuid" ] }
-structopt = "0.3.19"
-blake3 = "0.3.7"
-hex = "0.4.2"
-uuid = { version = "0.8.1", features = [ "v4" ] }
+members = ["libcommonplace", "commonplace_cli"]
