@@ -1,5 +1,5 @@
 use simple_server::{Method, Server, StatusCode, Request, ResponseBuilder, ResponseResult};
-use libcommonplace::{Connection, open_db, get_tag_tree};
+use libcommonplace::{open_db, get_tag_tree};
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
