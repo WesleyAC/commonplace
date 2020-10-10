@@ -3,8 +3,11 @@ use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::fmt;
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use uuid::Uuid;
+use serde::{Serialize, Deserialize};
+
+pub use rusqlite::Connection;
 
 #[derive(Debug)]
 pub struct TagRow {
@@ -14,7 +17,7 @@ pub struct TagRow {
 }
 
 // TODO: add notes to tagtree
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TagTree {
     id: Uuid,
     name: String,

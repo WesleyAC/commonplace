@@ -1,0 +1,12 @@
+[package]
+name = "commonplace_gui"
+version = "0.0.0"
+authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
+edition = "2018"
+
+[dependencies]
+web-view = "0.6.3"
+simple-server = "0.4.0"
+rust-embed = "5.6.0"
+libcommonplace = { path = "../libcommonplace" }
+serde_json = "1.0"

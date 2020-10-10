@@ -1,0 +1,19 @@
+html, body {
+	margin: 0px;
+	padding: 0px;
+	background-color: #fec;
+}
+
+#sidebar {
+	width: 300px;
+	height: 100%;
+	position: fixed;
+	top: 0;
+	left: 0;
+	background-color: #fab;
+}
+
+#main {
+	width: 100%;
+	margin-left: 310px;
+}

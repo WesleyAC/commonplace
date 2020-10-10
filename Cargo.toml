@@ -1,3 +1,3 @@
 [workspace]
 
-members = ["libcommonplace", "commonplace_cli"]
+members = ["libcommonplace", "commonplace_cli", "commonplace_gui"]
