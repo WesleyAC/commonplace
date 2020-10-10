@@ -48,20 +48,20 @@ impl fmt::Display for TagTree {
 }
 
 #[derive(Debug)]
-pub enum MemexError {
+pub enum CommonplaceError {
     Sqlite(rusqlite::Error),
     Io(std::io::Error),
 }
 
-impl From<std::io::Error> for MemexError {
-    fn from(err: std::io::Error) -> MemexError {
-        MemexError::Io(err)
+impl From<std::io::Error> for CommonplaceError {
+    fn from(err: std::io::Error) -> CommonplaceError {
+        CommonplaceError::Io(err)
     }
 }
 
-impl From<rusqlite::Error> for MemexError {
-    fn from(err: rusqlite::Error) -> MemexError {
-        MemexError::Sqlite(err)
+impl From<rusqlite::Error> for CommonplaceError {
+    fn from(err: rusqlite::Error) -> CommonplaceError {
+        CommonplaceError::Sqlite(err)
     }
 }
 
@@ -81,7 +81,7 @@ fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, root_id: Option<Uuid>) -> Vec<T
     children
 }
 
-pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, MemexError> {
+pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
     let mut tag_query = db.prepare("SELECT id, name, parent FROM Tags")?;
     let tag_iter = tag_query.query_map(params![], |row| {
         Ok(TagRow {
@@ -94,13 +94,13 @@ pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, MemexError> {
     Ok(get_tag_tree_internal(&tag_iter.map(|x| x.unwrap()).collect(), None))
 }
 
-pub fn init_memex(db: &Connection) -> Result<(), MemexError> {
+pub fn init_memex(db: &Connection) -> Result<(), CommonplaceError> {
     db.execute_batch(include_str!("setup.sql"))?;
 
     Ok(())
 }
 
-pub fn add_file_to_blobstore(filename: PathBuf) -> Result<blake3::Hash, MemexError> {
+pub fn add_file_to_blobstore(filename: PathBuf) -> Result<blake3::Hash, CommonplaceError> {
     let data = fs::read(filename).unwrap();
     let hash = blake3::hash(&data);
     let mut file = File::create(hash.to_hex().as_str())?;
@@ -108,11 +108,11 @@ pub fn add_file_to_blobstore(filename: PathBuf) -> Result<blake3::Hash, MemexErr
     Ok(hash)
 }
 
-pub fn open_db() -> Result<Connection, MemexError> {
+pub fn open_db() -> Result<Connection, CommonplaceError> {
     Ok(Connection::open("index.db")?)
 }
 
-pub fn add_note(db: &Connection, name: String, filename: PathBuf) -> Result<Uuid, MemexError> {
+pub fn add_note(db: &Connection, name: String, filename: PathBuf) -> Result<Uuid, CommonplaceError> {
     // TODO: check that file doesn't exist
 
     let id = Uuid::new_v4();
@@ -127,7 +127,7 @@ pub fn add_note(db: &Connection, name: String, filename: PathBuf) -> Result<Uuid
     Ok(id)
 }
 
-pub fn create_tag(db: &Connection, tag: Vec<String>) -> Result<(), MemexError> {
+pub fn create_tag(db: &Connection, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let mut parent: Option<Uuid> = None;
 
     for tag_part in tag {
@@ -151,37 +151,37 @@ pub fn create_tag(db: &Connection, tag: Vec<String>) -> Result<(), MemexError> {
     Ok(())
 }
 
-pub fn delete_tag(db: &Connection, tag: Vec<String>) -> Result<(), MemexError> {
+pub fn delete_tag(db: &Connection, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let id = get_tag_id_by_name(db, tag)?;
     db.execute("DELETE FROM Tags WHERE id = ?1", params![id])?;
 
     Ok(())
 }
 
-pub fn tag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), MemexError> {
+pub fn tag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let tag_id = get_tag_id_by_name(db, tag)?;
     db.execute("INSERT INTO TagMap (note_id, tag_id) VALUES (?1, ?2)", params![note, tag_id])?;
     Ok(())
 }
 
-pub fn untag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), MemexError> {
+pub fn untag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let tag_id = get_tag_id_by_name(db, tag)?;
     db.execute("DELETE FROM TagMap WHERE note_id = ?1 AND tag_id = ?2", params![note, tag_id])?;
     Ok(())
 }
 
-pub fn update_note(db: &Connection, note: Uuid, filename: PathBuf) -> Result<(), MemexError> {
+pub fn update_note(db: &Connection, note: Uuid, filename: PathBuf) -> Result<(), CommonplaceError> {
     let hash = add_file_to_blobstore(filename)?.as_bytes().to_vec();
     db.execute("UPDATE Notes SET hash = ?1 WHERE id = ?2", params![hash, note])?;
     Ok(())
 }
 
-pub fn rename_note(db: &Connection, note: Uuid, name: String) -> Result<(), MemexError> {
+pub fn rename_note(db: &Connection, note: Uuid, name: String) -> Result<(), CommonplaceError> {
     db.execute("UPDATE Notes SET name = ?1 WHERE id = ?2", params![name, note])?;
     Ok(())
 }
 
-pub fn get_tag_id_by_name(db: &Connection, tag: Vec<String>) -> Result<Uuid, MemexError> {
+pub fn get_tag_id_by_name(db: &Connection, tag: Vec<String>) -> Result<Uuid, CommonplaceError> {
     let mut id: Option<Uuid> = None;
 
     for tag_part in tag {

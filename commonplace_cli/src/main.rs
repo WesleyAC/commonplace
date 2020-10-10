@@ -1,7 +1,7 @@
 use structopt::StructOpt;
 use std::path::PathBuf;
 use uuid::Uuid;
-use libcommonplace::{open_db, init_memex, add_note, update_note, rename_note, create_tag, delete_tag, tag_note, untag_note, get_tag_tree, MemexError};
+use libcommonplace::{open_db, init_memex, add_note, update_note, rename_note, create_tag, delete_tag, tag_note, untag_note, get_tag_tree, CommonplaceError};
 
 #[derive(Debug)]
 struct TagList(Vec<String>);
@@ -52,7 +52,7 @@ enum Cmdline {
     },
 }
 
-fn main() -> Result<(), MemexError> {
+fn main() -> Result<(), CommonplaceError> {
     let cmdline = Cmdline::from_args();
 
     let db = open_db()?;
