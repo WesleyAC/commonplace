@@ -22,6 +22,7 @@ pub struct TagTree {
     id: Uuid,
     name: String,
     children: Vec<TagTree>,
+    notes: Vec<Uuid>,
 }
 
 impl From<&TagRow> for TagTree {
@@ -30,13 +31,14 @@ impl From<&TagRow> for TagTree {
             id: tag_row.id,
             name: tag_row.name.clone(),
             children: vec![],
+            notes: vec![],
         }
     }
 }
 
 impl TagTree {
     fn pretty_print(&self, f: &mut fmt::Formatter, depth: usize) -> fmt::Result {
-        write!(f, "{}{}\n", " ".repeat(depth), self.name)?;
+        write!(f, "{}{}: {:?}\n", " ".repeat(depth), self.name, self.notes)?;
         for child in &self.children {
             child.pretty_print(f, depth + 1)?
         }
@@ -68,7 +70,7 @@ impl From<rusqlite::Error> for CommonplaceError {
     }
 }
 
-fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, root_id: Option<Uuid>) -> Vec<TagTree> {
+fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Uuid)>, root_id: Option<Uuid>) -> Vec<TagTree> {
     let mut children = vec![];
 
     for tag_row in tag_rows {
@@ -76,8 +78,9 @@ fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, root_id: Option<Uuid>) -> Vec<T
             children.push(TagTree {
                 id: tag_row.id,
                 name: tag_row.name.clone(),
-                children: get_tag_tree_internal(tag_rows, Some(tag_row.id))
-            });        
+                children: get_tag_tree_internal(tag_rows, tagmap_rows, Some(tag_row.id)),
+                notes: tagmap_rows.iter().filter_map(|x| if x.1 == tag_row.id { Some(x.0) } else { None }).collect(),
+            });
         }
     }
 
@@ -86,15 +89,20 @@ fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, root_id: Option<Uuid>) -> Vec<T
 
 pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
     let mut tag_query = db.prepare("SELECT id, name, parent FROM Tags")?;
-    let tag_iter = tag_query.query_map(params![], |row| {
+    let tag_rows = tag_query.query_map(params![], |row| {
         Ok(TagRow {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            parent: row.get(2)?,
+            id: row.get("id")?,
+            name: row.get("name")?,
+            parent: row.get("parent")?,
         })
-    })?;
+    })?.map(|x| x.unwrap()).collect();
 
-    Ok(get_tag_tree_internal(&tag_iter.map(|x| x.unwrap()).collect(), None))
+    let mut tagmap_query = db.prepare("SELECT note_id, tag_id FROM TagMap")?;
+    let tagmap_rows: Vec<(Uuid, Uuid)> = tagmap_query.query_map(params![], |row| {
+        Ok((row.get("note_id")?, row.get("tag_id")?))
+    })?.map(|x| x.unwrap()).collect();
+
+    Ok(get_tag_tree_internal(&tag_rows, &tagmap_rows, None))
 }
 
 pub fn init_memex(db: &Connection) -> Result<(), CommonplaceError> {
