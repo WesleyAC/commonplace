@@ -1,19 +1,10 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Element, Request, RequestInit, RequestMode, Response};
+use web_sys::{Element, Event, HtmlElement, Request, RequestInit, RequestMode, Response, console};
+use js_sys::Function;
 
 use libcommonplace_types::TagTree;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
 
 async fn api_get<'a, T: ?Sized>(path: &str) -> Result<T, JsValue>
 where
@@ -41,6 +32,7 @@ fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
         let list_inner = document.create_element("div")?;
         list_inner.set_inner_html(&tag.name);
         list_inner.class_list().add_1("tag")?;
+        list_inner.set_attribute("onclick", "tag_click(event)");
         list_item.append_child(&list_inner)?;
         list_item.append_child(&render_sidebar(tag.children)?.into())?;
         let note_list = document.create_element("ul")?;
@@ -59,11 +51,24 @@ fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
     Ok(e)
 }
 
+#[wasm_bindgen]
+pub fn tag_click(e: Event) {
+    let elem = e.target().unwrap().dyn_into::<Element>().unwrap().parent_element().unwrap();
+
+    let children = elem.query_selector_all(":scope > ul").unwrap();
+    js_sys::Array::from(&children).for_each(&mut |c, _, _| {
+        let elem = c.dyn_ref::<HtmlElement>().unwrap();
+        let current_display = elem.style().get_property_value("display").unwrap();
+        elem.style().set_property("display", if current_display == "none" { "block" } else { "none" });
+    });
+}
+
 #[wasm_bindgen(start)]
 pub async fn main() -> Result<(), JsValue> {
-    let document = web_sys::window().unwrap().document().unwrap();
-    
-    console_log!("loaded!");
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+
+    console::log_1(&"loaded!".into());
 
     let tagtree: Vec<TagTree> = api_get("/api/showtree").await?;
     document.get_element_by_id("sidebar").unwrap().set_inner_html(&render_sidebar(tagtree)?.outer_html());

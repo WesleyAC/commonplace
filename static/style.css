@@ -11,6 +11,12 @@ html, body {
 	top: 0;
 	left: 0;
 	background-color: #fab;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+#sidebar li {
+	list-style: none;
 }
 
 #main {
@@ -24,4 +30,5 @@ html, body {
 	border-radius: 4px;
 	padding: 2px;
 	margin: 1px;
+	cursor: pointer;
 }

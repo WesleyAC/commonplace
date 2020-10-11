@@ -66,7 +66,7 @@ pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
         Ok((
             row.get("tag_id")?,
             Note {
-                id: row.get("tag_id")?,
+                id: row.get("note_id")?,
                 hash,
                 name: row.get("name")?,
                 mimetype: row.get("mimetype")?,

@@ -4,10 +4,12 @@
 		<meta charset="UTF-8">
 		<link rel="stylesheet" href="/style.css">
 		<script type="module">
-			import init from './commonplace_gui_client.js';
+			import init, { tag_click } from './commonplace_gui_client.js';
 
 			async function run() {
 				await init();
+
+				window.tag_click = tag_click;
 			}
 
 			run();
