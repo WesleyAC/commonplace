@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Element, Event, HtmlElement, Request, RequestInit, RequestMode, Response, console};
-use js_sys::Function;
 
 use libcommonplace_types::TagTree;
 
@@ -32,7 +31,8 @@ fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
         let list_inner = document.create_element("div")?;
         list_inner.set_inner_html(&tag.name);
         list_inner.class_list().add_1("tag")?;
-        list_inner.set_attribute("onclick", "tag_click(event)");
+        list_inner.set_attribute("onclick", "tag_click(event)")?;
+        list_inner.set_attribute("data-uuid", &format!("{}", tag.id))?;
         list_item.append_child(&list_inner)?;
         list_item.append_child(&render_sidebar(tag.children)?.into())?;
         let note_list = document.create_element("ul")?;
@@ -41,6 +41,8 @@ fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
             let list_inner = document.create_element("div")?;
             list_inner.set_inner_html(&note.name);
             list_inner.class_list().add_1("note")?;
+            list_inner.set_attribute("onclick", "note_click(event)")?;
+            list_inner.set_attribute("data-uuid", &format!("{}", note.id))?;
             list_item.append_child(&list_inner)?;
             note_list.append_child(&list_item)?;
         }
@@ -61,6 +63,11 @@ pub fn tag_click(e: Event) {
         let current_display = elem.style().get_property_value("display").unwrap();
         elem.style().set_property("display", if current_display == "none" { "block" } else { "none" });
     });
+}
+
+#[wasm_bindgen]
+pub fn note_click(e: Event) {
+    console::log_1(&e);
 }
 
 #[wasm_bindgen(start)]

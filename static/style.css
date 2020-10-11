@@ -31,4 +31,14 @@ html, body {
 	padding: 2px;
 	margin: 1px;
 	cursor: pointer;
+	font-weight: bold;
+}
+
+.note {
+	background-color: #eee;
+	display: inline-block;
+	border-radius: 4px;
+	padding: 2px;
+	margin: 1px;
+	cursor: pointer;
 }

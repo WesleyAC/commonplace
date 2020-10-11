@@ -32,6 +32,17 @@ fn handle_show_tree(response: &mut ResponseBuilder) -> ResponseResult {
     Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&tree).unwrap())?)
 }
 
+fn handle_get_blob(response: &mut ResponseBuilder, hash: &str) -> ResponseResult {
+    if !hash.chars().all(|c| (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))  {
+        return make_404(response);
+    }
+    if let Ok(contents) = std::fs::read(hash) {
+        Ok(response.header("Content-Type", "application/octet-stream").body(contents)?)
+    } else {
+        make_404(response)
+    }
+}
+
 fn main() {
     let port = 38841;
     let bind_addr = "127.0.0.1";
@@ -41,6 +52,7 @@ fn main() {
             let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
             match (request.method(), &path[..]) {
                 (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
+                (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
                 (&Method::GET, _) => handle_static(&request, &mut response),
                 (_, _) => make_404(&mut response),
             }
