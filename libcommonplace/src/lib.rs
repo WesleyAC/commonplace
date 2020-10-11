@@ -2,55 +2,11 @@ use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
-use std::fmt;
 use rusqlite::params;
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
+use libcommonplace_types::{TagRow, TagTree, Note};
 
 pub use rusqlite::Connection;
-
-#[derive(Debug)]
-pub struct TagRow {
-    id: Uuid,
-    name: String,
-    parent: Option<Uuid>,
-}
-
-// TODO: add notes to tagtree
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TagTree {
-    id: Uuid,
-    name: String,
-    children: Vec<TagTree>,
-    notes: Vec<Uuid>,
-}
-
-impl From<&TagRow> for TagTree {
-    fn from(tag_row: &TagRow) -> Self {
-        TagTree {
-            id: tag_row.id,
-            name: tag_row.name.clone(),
-            children: vec![],
-            notes: vec![],
-        }
-    }
-}
-
-impl TagTree {
-    fn pretty_print(&self, f: &mut fmt::Formatter, depth: usize) -> fmt::Result {
-        write!(f, "{}{}: {:?}\n", " ".repeat(depth), self.name, self.notes)?;
-        for child in &self.children {
-            child.pretty_print(f, depth + 1)?
-        }
-        Ok(())
-    }
-}
-
-impl fmt::Display for TagTree {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.pretty_print(f, 0)
-    }
-}
 
 #[derive(Debug)]
 pub enum CommonplaceError {
@@ -70,7 +26,7 @@ impl From<rusqlite::Error> for CommonplaceError {
     }
 }
 
-fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Uuid)>, root_id: Option<Uuid>) -> Vec<TagTree> {
+fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Note)>, root_id: Option<Uuid>) -> Vec<TagTree> {
     let mut children = vec![];
 
     for tag_row in tag_rows {
@@ -79,7 +35,13 @@ fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Uuid)>
                 id: tag_row.id,
                 name: tag_row.name.clone(),
                 children: get_tag_tree_internal(tag_rows, tagmap_rows, Some(tag_row.id)),
-                notes: tagmap_rows.iter().filter_map(|x| if x.1 == tag_row.id { Some(x.0) } else { None }).collect(),
+                notes: tagmap_rows.iter().filter_map(|x| {
+                    if x.0 == tag_row.id {
+                        Some(x.1.clone())
+                    } else {
+                        None
+                    }
+                }).collect(),
             });
         }
     }
@@ -97,9 +59,19 @@ pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
         })
     })?.map(|x| x.unwrap()).collect();
 
-    let mut tagmap_query = db.prepare("SELECT note_id, tag_id FROM TagMap")?;
-    let tagmap_rows: Vec<(Uuid, Uuid)> = tagmap_query.query_map(params![], |row| {
-        Ok((row.get("note_id")?, row.get("tag_id")?))
+    let mut tagmap_query = db.prepare("SELECT tag_id, note_id, hash, name, mimetype FROM TagMap JOIN Notes ON note_id = id")?;
+    let tagmap_rows: Vec<(Uuid, Note)> = tagmap_query.query_map(params![], |row| {
+        let mut hash: [u8; 32] = [0; 32];
+        hash.copy_from_slice(&row.get::<&str, Vec<u8>>("hash")?[..]);
+        Ok((
+            row.get("tag_id")?,
+            Note {
+                id: row.get("tag_id")?,
+                hash,
+                name: row.get("name")?,
+                mimetype: row.get("mimetype")?,
+            }
+        ))
     })?.map(|x| x.unwrap()).collect();
 
     Ok(get_tag_tree_internal(&tag_rows, &tagmap_rows, None))

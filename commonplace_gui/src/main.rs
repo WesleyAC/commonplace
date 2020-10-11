@@ -3,7 +3,7 @@ use libcommonplace::{open_db, get_tag_tree};
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
-#[folder = "src/static"]
+#[folder = "../static"]
 struct StaticFiles;
 
 fn make_404(response: &mut ResponseBuilder) -> ResponseResult {

@@ -3,6 +3,15 @@
 	<head>
 		<meta charset="UTF-8">
 		<link rel="stylesheet" href="/style.css">
+		<script type="module">
+			import init from './commonplace_gui_client.js';
+
+			async function run() {
+				await init();
+			}
+
+			run();
+		</script>
 	</head>
 	<body>
 		<div id="sidebar"></div>
