@@ -21,7 +21,39 @@
 		<div id="sidebar"></div>
 		<div id="main">
 			<h1 id="title">Commonplace</h1>
-			<textarea id="editor"></textarea>
+			<div id="editor"></div>
 		</div>
+		<script src="./vendor/react.min.js"></script>
+		<script src="./vendor/react-dom.min.js"></script>
+		<script src="./vendor/react-dom-server.min.js"></script>
+		<script src="./vendor/slate.min.js"></script>
+		<script src="./vendor/slate-react.min.js"></script>
+		<script>
+			const App = () => {
+				const editor = React.useMemo(() => SlateReact.withReact(Slate.createEditor()), []);
+
+				const [value, setValue] = React.useState([]);
+
+				React.useEffect(() => {
+					window.update_slate = (text) => {
+						setValue([{
+							type: 'paragraph',
+							children: [{
+								text: text
+							}]
+						}]);
+					};
+				}, [])
+
+
+				return React.createElement(SlateReact.Slate, {
+					editor: editor,
+					value: value,
+					onChange: newValue => setValue(newValue)
+				}, React.createElement(SlateReact.Editable, null));
+			};
+
+			ReactDOM.render(React.createElement(App), document.getElementById("editor"));
+		</script>
 	</body>
 </html>

@@ -2,7 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Element, Event, HtmlElement, HtmlTextAreaElement, Request, RequestInit, RequestMode, Response, console};
-use js_sys::Uint8Array;
+use js_sys::{Function, Uint8Array};
 
 use libcommonplace_types::{TagTree, Note};
 
@@ -72,10 +72,11 @@ async fn load_note(uuid: &str) {
     let contents = blob_get(&hex::encode(note.hash)).await.unwrap().to_vec();
     let contents = std::str::from_utf8(&contents).unwrap();
 
-    let document = web_sys::window().unwrap().document().unwrap();
-    document.get_element_by_id("editor").unwrap().dyn_into::<HtmlTextAreaElement>().unwrap().set_value(&contents);
+    let window = web_sys::window().unwrap();
+    let document = window.document().unwrap();
+    let update_slate = window.get("update_slate").unwrap().dyn_into::<Function>().unwrap();
+    update_slate.call1(&window, &contents.into());
     document.get_element_by_id("title").unwrap().set_inner_html(&note.name);
-    console::log_1(&"note_click".into());
 }
 
 #[wasm_bindgen]
