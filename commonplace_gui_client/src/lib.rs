@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Element, Event, HtmlElement, HtmlTextAreaElement, Request, RequestInit, RequestMode, Response, console};
+use web_sys::{Element, Event, HtmlElement, HtmlInputElement, Request, RequestInit, RequestMode, Response, console};
 use js_sys::{Function, Uint8Array};
 
 use libcommonplace_types::{TagTree, Note};
@@ -10,7 +10,7 @@ async fn api_get<'a, T: ?Sized>(path: &str) -> Result<T, JsValue>
 where
     for<'de> T: serde::de::Deserialize<'de> + 'a
 {
-    let window = web_sys::window().expect("no global `window` exists");
+    let window = web_sys::window().unwrap();
     let mut opts = RequestInit::new();
     opts.method("GET");
     opts.mode(RequestMode::SameOrigin);
@@ -76,7 +76,20 @@ async fn load_note(uuid: &str) {
     let document = window.document().unwrap();
     let update_slate = window.get("update_slate").unwrap().dyn_into::<Function>().unwrap();
     update_slate.call1(&window, &contents.into());
-    document.get_element_by_id("title").unwrap().set_inner_html(&note.name);
+    let title = document.get_element_by_id("title").unwrap().dyn_into::<HtmlInputElement>().unwrap();
+    title.set_value(&note.name);
+    title.set_attribute("onblur", &format!("rename_note('{}', event.target.value)", uuid));
+}
+
+#[wasm_bindgen]
+pub async fn rename_note(uuid: String, name: String) {
+    let window = web_sys::window().unwrap();
+    let mut opts = RequestInit::new();
+    opts.method("POST");
+    opts.mode(RequestMode::SameOrigin);
+    opts.body(Some(&name.into()));
+    let request = Request::new_with_str_and_init(&format!("/api/note/{}/rename", uuid), &opts).unwrap();
+    JsFuture::from(window.fetch_with_request(&request)).await.unwrap();
 }
 
 #[wasm_bindgen]

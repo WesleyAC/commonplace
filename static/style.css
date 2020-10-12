@@ -4,6 +4,10 @@ html, body {
 	background-color: #fec;
 }
 
+h1, h2, h3, h4, h5, h6 {
+	margin: 0px;
+}
+
 #sidebar {
 	width: 300px;
 	height: 100vh;
@@ -42,6 +46,16 @@ html, body {
 	background-color: #f4f4f4;
 	padding: 10px;
 	border-radius: 10px;
+}
+
+#title {
+	margin-bottom: 10px;
+	background-color: #f4f4f4;
+	border: 0px;
+	padding: 10px;
+	border-radius: 10px;
+	font-size: 25px;
+	width: calc(100% - 20px);
 }
 
 .tag {
