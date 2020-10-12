@@ -4,18 +4,6 @@
 		<meta charset="UTF-8">
 		<title>Commonplace</title>
 		<link rel="stylesheet" href="/style.css">
-		<script type="module">
-			import init, { tag_click, note_click } from './commonplace_gui_client.js';
-
-			async function run() {
-				await init();
-
-				window.tag_click = tag_click;
-				window.note_click = note_click;
-			}
-
-			run();
-		</script>
 	</head>
 	<body>
 		<div id="sidebar"></div>
@@ -27,33 +15,9 @@
 		<script src="./vendor/react-dom.min.js"></script>
 		<script src="./vendor/react-dom-server.min.js"></script>
 		<script src="./vendor/slate.min.js"></script>
+		<script src="./vendor/slate-history.min.js"></script>
 		<script src="./vendor/slate-react.min.js"></script>
-		<script>
-			const App = () => {
-				const editor = React.useMemo(() => SlateReact.withReact(Slate.createEditor()), []);
-
-				const [value, setValue] = React.useState([]);
-
-				React.useEffect(() => {
-					window.update_slate = (text) => {
-						setValue([{
-							type: 'paragraph',
-							children: [{
-								text: text
-							}]
-						}]);
-					};
-				}, [])
-
-
-				return React.createElement(SlateReact.Slate, {
-					editor: editor,
-					value: value,
-					onChange: newValue => setValue(newValue)
-				}, React.createElement(SlateReact.Editable, null));
-			};
-
-			ReactDOM.render(React.createElement(App), document.getElementById("editor"));
-		</script>
+		<script src="./slate_shim.js"></script>
+		<script type="module" src="./client_shim.js"></script>
 	</body>
 </html>
