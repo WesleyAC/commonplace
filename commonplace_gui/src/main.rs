@@ -71,7 +71,7 @@ fn main() {
     let port = 38841;
     let bind_addr = "127.0.0.1";
 
-    std::thread::spawn(move || {
+    //std::thread::spawn(move || {
         let server = Server::new(|request, mut response| {
             let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
             match (request.method(), &path[..]) {
@@ -84,8 +84,9 @@ fn main() {
         });
 
         server.listen(bind_addr, &format!("{}", port));
-    });
+    //});
 
+    /*
     web_view::builder()
         .title("Commonplace")
         .content(web_view::Content::Url(format!("http://{}:{}/index.html", bind_addr, port)))
@@ -93,4 +94,5 @@ fn main() {
         .invoke_handler(|_webview, _arg| Ok(()))
         .run()
         .unwrap();
+    */
 }

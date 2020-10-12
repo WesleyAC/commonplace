@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Element, Event, HtmlElement, Request, RequestInit, RequestMode, Response, console};
+use web_sys::{Element, Event, HtmlElement, HtmlTextAreaElement, Request, RequestInit, RequestMode, Response, console};
 use js_sys::Uint8Array;
 
 use libcommonplace_types::{TagTree, Note};
@@ -72,19 +72,16 @@ async fn load_note(uuid: &str) {
     let contents = blob_get(&hex::encode(note.hash)).await.unwrap().to_vec();
     let contents = std::str::from_utf8(&contents).unwrap();
 
-    web_sys::window().unwrap().document().unwrap().get_element_by_id("editor").unwrap().set_inner_html(&contents);
+    let document = web_sys::window().unwrap().document().unwrap();
+    document.get_element_by_id("editor").unwrap().dyn_into::<HtmlTextAreaElement>().unwrap().set_value(&contents);
+    document.get_element_by_id("title").unwrap().set_inner_html(&note.name);
+    console::log_1(&"note_click".into());
 }
 
 #[wasm_bindgen]
 pub fn tag_click(e: Event) {
     let elem = e.target().unwrap().dyn_into::<Element>().unwrap().parent_element().unwrap();
-
-    let children = elem.query_selector_all(":scope > ul").unwrap();
-    js_sys::Array::from(&children).for_each(&mut |c, _, _| {
-        let elem = c.dyn_ref::<HtmlElement>().unwrap();
-        let current_display = elem.style().get_property_value("display").unwrap();
-        elem.style().set_property("display", if current_display == "none" { "block" } else { "none" });
-    });
+    elem.class_list().toggle(&"tree-closed");
 }
 
 #[wasm_bindgen]

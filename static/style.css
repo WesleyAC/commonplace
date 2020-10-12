@@ -14,14 +14,31 @@ html, body {
 	-webkit-user-select: none;
 }
 
-#sidebar li {
-	list-style: none;
+#sidebar ul {
+	padding-left: 25px;
+}
+
+#sidebar :not(.tree-closed) {
+	list-style: '▼';
+}
+
+#sidebar .tree-closed {
+	list-style: '▶';
+}
+
+#sidebar .tree-closed > ul {
+	display: none;
 }
 
 #main {
 	padding: 10px;
 	width: calc(100% - 320px);
 	float: right;
+}
+
+#editor {
+	width: 100%;
+	height: 100%;
 }
 
 .tag {

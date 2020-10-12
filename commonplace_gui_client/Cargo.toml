@@ -26,6 +26,7 @@ features = [
   'EventTarget',
   'HtmlElement',
   'HtmlCollection',
+  'HtmlTextAreaElement',
   'Node',
   'NodeList',
   'Headers',
