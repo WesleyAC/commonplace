@@ -81,7 +81,7 @@ async fn load_note(uuid: &str) {
 #[wasm_bindgen]
 pub fn tag_click(e: Event) {
     let elem = e.target().unwrap().dyn_into::<Element>().unwrap().parent_element().unwrap();
-    elem.class_list().toggle(&"tree-closed");
+    elem.class_list().toggle(&"tree-closed").unwrap();
 }
 
 #[wasm_bindgen]
