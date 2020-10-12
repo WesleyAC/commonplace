@@ -2,8 +2,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Element, Event, HtmlElement, Request, RequestInit, RequestMode, Response, console};
+use js_sys::Uint8Array;
 
-use libcommonplace_types::TagTree;
+use libcommonplace_types::{TagTree, Note};
 
 async fn api_get<'a, T: ?Sized>(path: &str) -> Result<T, JsValue>
 where
@@ -20,6 +21,19 @@ where
     let resp: Response = resp_value.dyn_into().unwrap();
     let json = JsFuture::from(resp.json()?).await?;
     json.into_serde().map_err(|_| JsValue::NULL)
+}
+
+async fn blob_get(hash: &str) -> Result<Uint8Array, JsValue> {
+    let window = web_sys::window().expect("no global `window` exists");
+    let mut opts = RequestInit::new();
+    opts.method("GET");
+    opts.mode(RequestMode::SameOrigin);
+    let request = Request::new_with_str_and_init(&format!("/api/blob/{}", hash), &opts)?;
+    let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
+
+    assert!(resp_value.is_instance_of::<Response>());
+    let resp: Response = resp_value.dyn_into().unwrap();
+    Ok(Uint8Array::new(&JsFuture::from(resp.array_buffer()?).await?))
 }
 
 fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
@@ -53,6 +67,14 @@ fn render_sidebar(tag_tree: Vec<TagTree>) -> Result<Element, JsValue> {
     Ok(e)
 }
 
+async fn load_note(uuid: &str) {
+    let note: Note = api_get(&format!("/api/note/{}", uuid)).await.unwrap();
+    let contents = blob_get(&hex::encode(note.hash)).await.unwrap().to_vec();
+    let contents = std::str::from_utf8(&contents).unwrap();
+
+    web_sys::window().unwrap().document().unwrap().get_element_by_id("editor").unwrap().set_inner_html(&contents);
+}
+
 #[wasm_bindgen]
 pub fn tag_click(e: Event) {
     let elem = e.target().unwrap().dyn_into::<Element>().unwrap().parent_element().unwrap();
@@ -66,8 +88,9 @@ pub fn tag_click(e: Event) {
 }
 
 #[wasm_bindgen]
-pub fn note_click(e: Event) {
-    console::log_1(&e);
+pub async fn note_click(e: Event) {
+    let uuid = e.target().unwrap().dyn_into::<Element>().unwrap().get_attribute("data-uuid").unwrap();
+    load_note(&uuid).await;
 }
 
 #[wasm_bindgen(start)]

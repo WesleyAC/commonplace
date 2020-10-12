@@ -1,6 +1,10 @@
 use simple_server::{Method, Server, StatusCode, Request, ResponseBuilder, ResponseResult};
 use libcommonplace::{open_db, get_tag_tree};
 use rust_embed::RustEmbed;
+use uuid::Uuid;
+use rusqlite::params;
+use libcommonplace::Note;
+use std::str::FromStr;
 
 #[derive(RustEmbed)]
 #[folder = "../static"]
@@ -43,6 +47,26 @@ fn handle_get_blob(response: &mut ResponseBuilder, hash: &str) -> ResponseResult
     }
 }
 
+fn handle_get_note(response: &mut ResponseBuilder, uuid: &str) -> ResponseResult {
+    let db = open_db().unwrap();
+    if let Ok(uuid) = Uuid::from_str(uuid) {
+        let mut note_query = db.prepare("SELECT * FROM Notes WHERE id = ?1").unwrap();
+        let note = note_query.query_row(params![uuid], |row| {
+            let mut hash: [u8; 32] = [0; 32];
+            hash.copy_from_slice(&row.get::<&str, Vec<u8>>("hash")?[..]);
+            Ok(Note {
+                id: uuid,
+                hash,
+                name: row.get("name")?,
+                mimetype: row.get("mimetype")?,
+            })
+        }).unwrap();
+        Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&note).unwrap())?)
+    } else {
+        make_404(response)
+    }
+}
+
 fn main() {
     let port = 38841;
     let bind_addr = "127.0.0.1";
@@ -53,6 +77,7 @@ fn main() {
             match (request.method(), &path[..]) {
                 (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
                 (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
+                (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
                 (&Method::GET, _) => handle_static(&request, &mut response),
                 (_, _) => make_404(&mut response),
             }

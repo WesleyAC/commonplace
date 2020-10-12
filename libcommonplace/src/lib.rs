@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::Write;
 use rusqlite::params;
 use uuid::Uuid;
-use libcommonplace_types::{TagRow, TagTree, Note};
+pub use libcommonplace_types::{TagRow, TagTree, Note};
 
 pub use rusqlite::Connection;
 

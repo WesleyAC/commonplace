@@ -10,3 +10,5 @@ simple-server = "0.4.0"
 rust-embed = "5.6.0"
 libcommonplace = { path = "../libcommonplace" }
 serde_json = "1.0"
+uuid = { version = "0.8.1", features = [ "v4", "serde" ] }
+rusqlite = { version = "0.24.1", features = [ "bundled", "uuid" ] }

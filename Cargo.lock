@@ -150,9 +150,11 @@ name = "commonplace_gui"
 version = "0.0.0"
 dependencies = [
  "libcommonplace",
+ "rusqlite",
  "rust-embed",
  "serde_json",
  "simple-server",
+ "uuid",
  "web-view",
 ]
 
@@ -160,6 +162,7 @@ dependencies = [
 name = "commonplace_gui_client"
 version = "0.0.0"
 dependencies = [
+ "hex",
  "js-sys",
  "libcommonplace_types",
  "serde",
