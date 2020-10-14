@@ -1,21 +1,18 @@
-use simple_server::{Method, Server, StatusCode, Request, ResponseBuilder, ResponseResult};
+use rouille::{Request, Response};
 use libcommonplace::{Note, open_db, get_all_notes, get_tag_tree, rename_note, update_note_bytes};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
 use std::str::FromStr;
+use std::io::Read;
 
 #[derive(RustEmbed)]
 #[folder = "../commonplace_gui_client/static/"]
 struct StaticFiles;
 
-fn make_404(response: &mut ResponseBuilder) -> ResponseResult {
-    response.status(StatusCode::NOT_FOUND);
-    Ok(response.body("<h1>404</h1><p>Not found!<p>".as_bytes().to_vec())?)
-}
-
-fn handle_static(request: &Request<Vec<u8>>, response: &mut ResponseBuilder) -> ResponseResult {
-    let mimetype = match request.uri().path().split(".").last() {
+fn handle_static(path: String) -> Response {
+    println!("{}", path);
+    let mimetype = match path.split(".").last() {
         Some("html") => "text/html",
         Some("js") => "text/javascript",
         Some("css") => "text/css",
@@ -23,30 +20,30 @@ fn handle_static(request: &Request<Vec<u8>>, response: &mut ResponseBuilder) -> 
         _ => "text/plain",
     };
 
-    match StaticFiles::get(&request.uri().path()[1..]) {
-        Some(x) => Ok(response.header("Content-Type", mimetype).body(x[..].to_vec())?),
-        None => make_404(response),
+    match StaticFiles::get(&path) {
+        Some(x) => Response::from_data(mimetype, x[..].to_vec()),
+        None => Response::empty_404(),
     }
 }
 
-fn handle_show_tree(response: &mut ResponseBuilder) -> ResponseResult {
+fn handle_show_tree() -> Response {
     let db = open_db().unwrap();
     let tree = get_tag_tree(&db).unwrap();
-    Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&tree).unwrap())?)
+    Response::from_data("application/json", serde_json::to_vec(&tree).unwrap())
 }
 
-fn handle_get_blob(response: &mut ResponseBuilder, hash: &str) -> ResponseResult {
+fn handle_get_blob(hash: &str) -> Response {
     if !hash.chars().all(|c| (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))  {
-        return make_404(response);
+        return Response::empty_404();
     }
     if let Ok(contents) = std::fs::read(hash) {
-        Ok(response.header("Content-Type", "application/octet-stream").body(contents)?)
+        Response::from_data("application/octet-stream", contents)
     } else {
-        make_404(response)
+        Response::empty_404()
     }
 }
 
-fn handle_get_note(response: &mut ResponseBuilder, uuid: &str) -> ResponseResult {
+fn handle_get_note(uuid: &str) -> Response {
     let db = open_db().unwrap();
     if let Ok(uuid) = Uuid::from_str(uuid) {
         let mut note_query = db.prepare("SELECT * FROM Notes WHERE id = ?1").unwrap();
@@ -60,61 +57,66 @@ fn handle_get_note(response: &mut ResponseBuilder, uuid: &str) -> ResponseResult
                 mimetype: row.get("mimetype")?,
             })
         }).unwrap();
-        Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&note).unwrap())?)
+        Response::from_data("application/json", serde_json::to_vec(&note).unwrap())
     } else {
-        make_404(response)
+        Response::empty_404()
     }
 }
 
-fn handle_rename_note(response: &mut ResponseBuilder, request: &Request<Vec<u8>>, uuid: &str) -> ResponseResult {
+fn handle_rename_note(name: Vec<u8>, uuid: &str) -> Response {
     if let Ok(uuid) = Uuid::from_str(uuid) {
         let db = open_db().unwrap();
-        rename_note(&db, uuid, String::from_utf8(request.body().to_vec()).unwrap());
-        Ok(response.body(vec![]).unwrap())
+        rename_note(&db, uuid, String::from_utf8(name).unwrap());
+        Response::empty_204()
     } else {
-        make_404(response)
+        Response::empty_404()
     }
 }
 
-// AAAAAHHHHGGGGGHHH there's a simple_server bug where requests can only be one read, need to
-// rewrite this whole binary to use a different library.
-// https://github.com/steveklabnik/simple-server/issues/116
-fn handle_update_note(response: &mut ResponseBuilder, request: &Request<Vec<u8>>, uuid: &str) -> ResponseResult {
+fn handle_update_note(contents: Vec<u8>, uuid: &str) -> Response {
     if let Ok(uuid) = Uuid::from_str(uuid) {
         let db = open_db().unwrap();
-        update_note_bytes(&db, uuid, request.body().to_vec());
-        Ok(response.body(vec![]).unwrap())
+        update_note_bytes(&db, uuid, contents);
+        Response::empty_204()
     } else {
-        make_404(response)
+        Response::empty_404()
     }
 }
 
-fn handle_get_notes(response: &mut ResponseBuilder) -> ResponseResult {
+fn handle_get_notes() -> Response {
     let db = open_db().unwrap();
     if let Ok(notes) = get_all_notes(&db) {
-        Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&notes).unwrap())?)
+        Response::from_data("application/json", serde_json::to_vec(&notes).unwrap())
     } else {
-        make_404(response)
+        Response::empty_404()
     }
 }
 
-fn main() {
-    let port = 38841;
-    let bind_addr = "127.0.0.1";
+#[macro_use]
+extern crate rouille;
 
-    let server = Server::new(|request, mut response| {
-        let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
+fn main() {
+    rouille::start_server("localhost:38841", move |request| {
+        let url = request.url();
+        let path: Vec<&str> = url.split("/").filter(|x| *x != "").collect();
         match (request.method(), &path[..]) {
-            (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
-            (&Method::GET, &["api", "notes"]) => handle_get_notes(&mut response),
-            (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
-            (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
-            (&Method::GET, _) => handle_static(&request, &mut response),
-            (&Method::POST, &["api", "note", uuid, "rename"]) => handle_rename_note(&mut response, &request, uuid),
-            (&Method::POST, &["api", "note", uuid]) => handle_update_note(&mut response, &request, uuid),
-            (_, _) => make_404(&mut response),
+            ("GET", &["api", "showtree"]) => handle_show_tree(),
+            ("GET", &["api", "notes"]) => handle_get_notes(),
+            ("GET", &["api", "blob", hash]) => handle_get_blob(hash),
+            ("GET", &["api", "note", uuid]) => handle_get_note(uuid),
+            ("GET", path) => handle_static(path.join("/")),
+            ("POST", &["api", "note", uuid, "rename"]) => {
+                let mut body = vec![];
+                request.data().unwrap().read_to_end(&mut body);
+                handle_rename_note(body, uuid)
+            },
+            ("POST", &["api", "note", uuid]) => {
+                let mut body = vec![];
+                request.data().unwrap().read_to_end(&mut body);
+                handle_update_note(body, uuid)
+            },
+
+            _ => rouille::Response::empty_404()
         }
     });
-
-    server.listen(bind_addr, &format!("{}", port));
 }
