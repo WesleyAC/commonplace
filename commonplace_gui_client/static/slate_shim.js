@@ -24,4 +24,6 @@ const App = () => {
 	}, React.createElement(SlateReact.Editable, null));
 };
 
-ReactDOM.render(React.createElement(App), document.getElementById("editor"));
+function start_slate() {
+	ReactDOM.render(React.createElement(App), document.getElementById("editor"));
+}

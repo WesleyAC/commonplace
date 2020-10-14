@@ -6,7 +6,7 @@ use rusqlite::params;
 use std::str::FromStr;
 
 #[derive(RustEmbed)]
-#[folder = "../static"]
+#[folder = "../commonplace_gui_client/static/"]
 struct StaticFiles;
 
 fn make_404(response: &mut ResponseBuilder) -> ResponseResult {

@@ -23,8 +23,7 @@ cd $BASE_DIR
 set -ex
 
 cd $BASE_DIR/commonplace_gui_client
-cargo +nightly build $BUILD_MODE_FLAG --target wasm32-unknown-unknown
-wasm-bindgen --target web $BASE_DIR/target/wasm32-unknown-unknown/$BUILD_MODE/commonplace_gui_client.wasm --out-dir $BASE_DIR/static/wasm/
+cargo make build
 
 cd $BASE_DIR/commonplace_gui
 cargo +nightly build $BUILD_MODE_FLAG

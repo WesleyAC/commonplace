@@ -1,0 +1,53 @@
+html, body {
+	margin: 0px;
+	padding: 0px;
+	background-color: #fec;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin: 0px;
+}
+
+#noteview {
+	float: right;
+	width: 80vw;
+	height: 100vh;
+}
+
+#sidebar {
+	width: 20vw;
+	height: 100vh;
+	float: left;
+	overflow: auto;
+	background-color: #fab;
+	user-select: none;
+}
+
+#sidebar ul {
+	padding-left: 25px;
+}
+
+#sidebar :not(.tree-closed) {
+	list-style: '▼';
+}
+
+#sidebar .tree-closed {
+	list-style: '▶';
+}
+
+#sidebar .tree-closed > ul {
+	display: none;
+}
+
+#sidebar button {
+	background-color: #eee;
+	border-radius: 4px;
+	border: 0px;
+	padding: 2px;
+	margin: 1px;
+	cursor: pointer;
+}
+
+#sidebar .tag {
+	font-weight: bold;
+}
