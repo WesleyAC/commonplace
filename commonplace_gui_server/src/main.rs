@@ -89,30 +89,18 @@ fn main() {
     let port = 38841;
     let bind_addr = "127.0.0.1";
 
-    //std::thread::spawn(move || {
-        let server = Server::new(|request, mut response| {
-            let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
-            match (request.method(), &path[..]) {
-                (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
-                (&Method::GET, &["api", "notes"]) => handle_get_notes(&mut response),
-                (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
-                (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
-                (&Method::GET, _) => handle_static(&request, &mut response),
-                (&Method::POST, &["api", "note", uuid, "rename"]) => handle_rename_note(&mut response, &request, uuid),
-                (_, _) => make_404(&mut response),
-            }
-        });
+    let server = Server::new(|request, mut response| {
+        let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
+        match (request.method(), &path[..]) {
+            (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
+            (&Method::GET, &["api", "notes"]) => handle_get_notes(&mut response),
+            (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
+            (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
+            (&Method::GET, _) => handle_static(&request, &mut response),
+            (&Method::POST, &["api", "note", uuid, "rename"]) => handle_rename_note(&mut response, &request, uuid),
+            (_, _) => make_404(&mut response),
+        }
+    });
 
-        server.listen(bind_addr, &format!("{}", port));
-    //});
-
-    /*
-    web_view::builder()
-        .title("Commonplace")
-        .content(web_view::Content::Url(format!("http://{}:{}/index.html", bind_addr, port)))
-        .user_data(0)
-        .invoke_handler(|_webview, _arg| Ok(()))
-        .run()
-        .unwrap();
-    */
+    server.listen(bind_addr, &format!("{}", port));
 }

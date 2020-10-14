@@ -25,7 +25,7 @@ set -ex
 cd $BASE_DIR/commonplace_gui_client
 cargo make build
 
-cd $BASE_DIR/commonplace_gui
+cd $BASE_DIR/commonplace_gui_server
 cargo +nightly build $BUILD_MODE_FLAG
 
 cd $BASE_DIR
