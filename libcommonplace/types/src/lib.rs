@@ -14,7 +14,7 @@ pub struct TagTree {
     pub id: Uuid,
     pub name: String,
     pub children: Vec<TagTree>,
-    pub notes: Vec<Note>,
+    pub notes: Vec<Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

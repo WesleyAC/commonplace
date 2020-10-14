@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::fs;
 use std::fs::File;
@@ -26,7 +27,7 @@ impl From<rusqlite::Error> for CommonplaceError {
     }
 }
 
-fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Note)>, root_id: Option<Uuid>) -> Vec<TagTree> {
+fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Uuid)>, root_id: Option<Uuid>) -> Vec<TagTree> {
     let mut children = vec![];
 
     for tag_row in tag_rows {
@@ -59,22 +60,35 @@ pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
         })
     })?.map(|x| x.unwrap()).collect();
 
-    let mut tagmap_query = db.prepare("SELECT tag_id, note_id, hash, name, mimetype FROM TagMap JOIN Notes ON note_id = id")?;
-    let tagmap_rows: Vec<(Uuid, Note)> = tagmap_query.query_map(params![], |row| {
-        let mut hash: [u8; 32] = [0; 32];
-        hash.copy_from_slice(&row.get::<&str, Vec<u8>>("hash")?[..]);
-        Ok((
-            row.get("tag_id")?,
-            Note {
-                id: row.get("note_id")?,
-                hash,
-                name: row.get("name")?,
-                mimetype: row.get("mimetype")?,
-            }
-        ))
+    let mut tagmap_query = db.prepare("SELECT tag_id, note_id FROM TagMap")?;
+    let tagmap_rows: Vec<(Uuid, Uuid)> = tagmap_query.query_map(params![], |row| {
+        Ok((row.get("tag_id")?, row.get("note_id")?))
     })?.map(|x| x.unwrap()).collect();
 
     Ok(get_tag_tree_internal(&tag_rows, &tagmap_rows, None))
+}
+
+
+pub fn get_all_notes(db: &Connection) -> Result<HashMap<Uuid, Note>, CommonplaceError> {
+    let mut notes_query = db.prepare("SELECT * FROM Notes")?;
+    let notes_rows: Vec<Note> = notes_query.query_map(params![], |row| {
+        let mut hash: [u8; 32] = [0; 32];
+        hash.copy_from_slice(&row.get::<&str, Vec<u8>>("hash")?[..]);
+        Ok(Note {
+            id: row.get("id")?,
+            hash,
+            name: row.get("name")?,
+            mimetype: row.get("mimetype")?,
+        })
+    })?.map(|x| x.unwrap()).collect();
+
+    let mut res = HashMap::new();
+
+    for note in notes_rows {
+        res.insert(note.id, note);
+    }
+
+    Ok(res)
 }
 
 pub fn init_memex(db: &Connection) -> Result<(), CommonplaceError> {

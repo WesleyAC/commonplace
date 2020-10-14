@@ -14,6 +14,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.send_msg(Msg::RequestUpdateTagTree);
     Model {
         tag_tree: None,
+        notes: HashMap::new(),
         tag_tree_folds: HashMap::new(),
         current_note: None,
     }
@@ -21,16 +22,17 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 
 struct Model {
     tag_tree: Option<Vec<TagTree>>,
+    notes: HashMap<Uuid, Note>,
     tag_tree_folds: HashMap<Uuid, bool>,
-    current_note: Option<Note>,
+    current_note: Option<Uuid>,
 }
 
 enum Msg {
     RequestUpdateTagTree,
-    UpdateTagTree(Vec<TagTree>),
+    UpdateTagTree((Vec<TagTree>, HashMap<Uuid, Note>)),
     ToggleTag(Uuid),
-    OpenNote(Note),
-    NoteBlobLoaded((Note, String)),
+    OpenNote(Uuid),
+    NoteBlobLoaded(String),
     RenameNote((Option<Uuid>, String)),
 }
 
@@ -41,23 +43,26 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 get_tag_tree().await.map(|t| Msg::UpdateTagTree(t)).ok()
             });
         },
-        Msg::UpdateTagTree(tag_tree) => {
+        Msg::UpdateTagTree((tag_tree, notes)) => {
             model.tag_tree = Some(tag_tree);
+            model.notes = notes;
         },
         Msg::ToggleTag(uuid) => {
             *model.tag_tree_folds.entry(uuid).or_insert(true) ^= true;
         },
         Msg::OpenNote(note) => {
-            orders.perform_cmd(enc!((note) async {
-                get_blob(&hex::encode(&note.hash)).await.map(|b| Msg::NoteBlobLoaded((note, b))).ok()
-            }));
-        },
-        Msg::NoteBlobLoaded((note, blob)) => {
-            update_slate(&blob);
             model.current_note = Some(note);
+            if let Some(hash) = model.notes.get(&note).map(|x| x.hash) {
+                orders.perform_cmd(enc!((hash) async move {
+                    get_blob(&hex::encode(&hash)).await.map(|b| Msg::NoteBlobLoaded(b)).ok()
+                }));
+            }
+        },
+        Msg::NoteBlobLoaded(blob) => {
+            update_slate(&blob);
         },
         Msg::RenameNote((uuid, name)) => {
-            if let Some(uuid) = uuid.or(model.current_note.as_ref().map(|x| x.id).or(None)) {
+            if let Some(uuid) = uuid.or(model.current_note.or(None)) {
                 orders.perform_cmd(async move {
                     rename_note(uuid, name).await;
                     Msg::RequestUpdateTagTree
@@ -67,14 +72,24 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-async fn get_tag_tree() -> Result<Vec<TagTree>, ()> {
+async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<Uuid, Note>), ()> {
     let bytes = Request::new("/api/showtree")
         .method(Method::Get)
         .fetch()
         .await.map_err(|e| { log!(e); })?
         .check_status().map_err(|e| { log!(e); })?
         .bytes().map_err(|e| { log!(e) }).await?;
-    serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })
+    let tree = serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })?;
+
+    let bytes = Request::new("/api/notes")
+        .method(Method::Get)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?
+        .bytes().map_err(|e| { log!(e) }).await?;
+    let notes = serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })?;
+
+    Ok((tree, notes))
 }
 
 async fn get_blob(hash: &str) -> Result<String, ()> {
@@ -103,14 +118,20 @@ fn view(model: &Model) -> Node<Msg> {
             id!["sidebar"],
             IF![
                 model.tag_tree.is_some() =>
-                tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds)
+                tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes)
             ],
         ],
         div![
             id!["noteview"],
             input![
                 attrs! {
-                    At::Value => model.current_note.as_ref().map(|note| note.name.as_str()).unwrap_or("");
+                    At::Value => {
+                        if let Some(uuid) = model.current_note {
+                            model.notes.get(&uuid).map(|x| x.name.as_str()).unwrap_or("")
+                        } else {
+                            ""
+                        }
+                    };
                 },
                 ev(Ev::Blur, |event| {
                     let name = event.target().unwrap()
@@ -124,7 +145,7 @@ fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>) -> Node<Msg> {
+fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>) -> Node<Msg> {
     ul![
         tag_tree.iter().map(|tag| {
             li![
@@ -134,13 +155,14 @@ fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>) -> N
                     &tag.name,
                     ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
                 ],
-                tree_view(&tag.children, tag_tree_folds),
+                tree_view(&tag.children, tag_tree_folds, notes),
                 ul![
                     tag.notes.iter().map(|note| {
                         li![
                             button![
                                 C!["note"],
-                                &note.name,
+                                notes.get(&note).map(|x| x.name.as_str()),
+                                //&note,
                                 ev(Ev::Click, enc!((note) move |_| Msg::OpenNote(note))),
                             ],
                         ]

@@ -1,5 +1,5 @@
 use simple_server::{Method, Server, StatusCode, Request, ResponseBuilder, ResponseResult};
-use libcommonplace::{Note, open_db, get_tag_tree, rename_note};
+use libcommonplace::{Note, open_db, get_all_notes, get_tag_tree, rename_note};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
@@ -76,6 +76,15 @@ fn handle_rename_note(response: &mut ResponseBuilder, request: &Request<Vec<u8>>
     }
 }
 
+fn handle_get_notes(response: &mut ResponseBuilder) -> ResponseResult {
+    let db = open_db().unwrap();
+    if let Ok(notes) = get_all_notes(&db) {
+        Ok(response.header("Content-Type", "application/json").body(serde_json::to_vec(&notes).unwrap())?)
+    } else {
+        make_404(response)
+    }
+}
+
 fn main() {
     let port = 38841;
     let bind_addr = "127.0.0.1";
@@ -85,6 +94,7 @@ fn main() {
             let path: Vec<&str> = request.uri().path().split("/").filter(|x| *x != "").collect();
             match (request.method(), &path[..]) {
                 (&Method::GET, &["api", "showtree"]) => handle_show_tree(&mut response),
+                (&Method::GET, &["api", "notes"]) => handle_get_notes(&mut response),
                 (&Method::GET, &["api", "blob", hash]) => handle_get_blob(&mut response, hash),
                 (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
                 (&Method::GET, _) => handle_static(&request, &mut response),

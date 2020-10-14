@@ -1,3 +1,9 @@
 [workspace]
 
 members = ["libcommonplace", "commonplace_cli", "commonplace_gui", "commonplace_gui_client"]
+
+[profile.release]
+lto = true
+opt-level = 'z'
+codegen-units = 1
+
