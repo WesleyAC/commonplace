@@ -105,6 +105,15 @@ pub fn add_file_to_blobstore(filename: PathBuf) -> Result<blake3::Hash, Commonpl
     Ok(hash)
 }
 
+pub fn add_bytes_to_blobstore(contents: Vec<u8>) -> Result<blake3::Hash, CommonplaceError> {
+    let hash = blake3::hash(&contents);
+    let mut file = File::create(hash.to_hex().as_str())?;
+    file.write_all(&contents)?;
+    file.flush()?;
+    file.sync_all()?;
+    Ok(hash)
+}
+
 pub fn open_db() -> Result<Connection, CommonplaceError> {
     Ok(Connection::open("index.db")?)
 }
@@ -169,6 +178,12 @@ pub fn untag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), C
 
 pub fn update_note(db: &Connection, note: Uuid, filename: PathBuf) -> Result<(), CommonplaceError> {
     let hash = add_file_to_blobstore(filename)?.as_bytes().to_vec();
+    db.execute("UPDATE Notes SET hash = ?1 WHERE id = ?2", params![hash, note])?;
+    Ok(())
+}
+
+pub fn update_note_bytes(db: &Connection, note: Uuid, contents: Vec<u8>) -> Result<(), CommonplaceError> {
+    let hash = add_bytes_to_blobstore(contents)?.as_bytes().to_vec();
     db.execute("UPDATE Notes SET hash = ?1 WHERE id = ?2", params![hash, note])?;
     Ok(())
 }

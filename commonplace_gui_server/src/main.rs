@@ -1,5 +1,5 @@
 use simple_server::{Method, Server, StatusCode, Request, ResponseBuilder, ResponseResult};
-use libcommonplace::{Note, open_db, get_all_notes, get_tag_tree, rename_note};
+use libcommonplace::{Note, open_db, get_all_notes, get_tag_tree, rename_note, update_note_bytes};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
@@ -76,6 +76,19 @@ fn handle_rename_note(response: &mut ResponseBuilder, request: &Request<Vec<u8>>
     }
 }
 
+// AAAAAHHHHGGGGGHHH there's a simple_server bug where requests can only be one read, need to
+// rewrite this whole binary to use a different library.
+// https://github.com/steveklabnik/simple-server/issues/116
+fn handle_update_note(response: &mut ResponseBuilder, request: &Request<Vec<u8>>, uuid: &str) -> ResponseResult {
+    if let Ok(uuid) = Uuid::from_str(uuid) {
+        let db = open_db().unwrap();
+        update_note_bytes(&db, uuid, request.body().to_vec());
+        Ok(response.body(vec![]).unwrap())
+    } else {
+        make_404(response)
+    }
+}
+
 fn handle_get_notes(response: &mut ResponseBuilder) -> ResponseResult {
     let db = open_db().unwrap();
     if let Ok(notes) = get_all_notes(&db) {
@@ -98,6 +111,7 @@ fn main() {
             (&Method::GET, &["api", "note", uuid]) => handle_get_note(&mut response, uuid),
             (&Method::GET, _) => handle_static(&request, &mut response),
             (&Method::POST, &["api", "note", uuid, "rename"]) => handle_rename_note(&mut response, &request, uuid),
+            (&Method::POST, &["api", "note", uuid]) => handle_update_note(&mut response, &request, uuid),
             (_, _) => make_404(&mut response),
         }
     });

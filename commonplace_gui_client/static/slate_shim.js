@@ -1,3 +1,19 @@
+const serialize = value => {
+	return (
+		value
+		.map(n => Slate.Node.string(n))
+		.join('\n')
+	)
+}
+
+const deserialize = string => {
+	return string.split('\n').map(line => {
+		return {
+			children: [{ text: line }],
+		}
+	})
+}
+
 const App = () => {
 	const editor = React.useMemo(() => {
 		return SlateHistory.withHistory(SlateReact.withReact(Slate.createEditor()))
@@ -7,12 +23,7 @@ const App = () => {
 
 	React.useEffect(() => {
 		window.update_slate = (text) => {
-			setValue([{
-				type: 'paragraph',
-				children: [{
-					text: text
-				}]
-			}]);
+			setValue(deserialize(text));
 		};
 	}, [])
 
@@ -20,7 +31,10 @@ const App = () => {
 	return React.createElement(SlateReact.Slate, {
 		editor: editor,
 		value: value,
-		onChange: newValue => setValue(newValue)
+		onChange: newValue => {
+			window.update_content(serialize(newValue));
+			setValue(newValue);
+		}
 	}, React.createElement(SlateReact.Editable, null));
 };
 

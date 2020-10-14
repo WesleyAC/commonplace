@@ -3,14 +3,11 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<link rel="stylesheet" href="/vendor/tailwind.min.css">
 		<link rel="stylesheet" href="/style.css">
 	</head>
 	<body>
 		<div id="app"></div>
-		<script type="module">
-			import init from '/wasm/package.js';
-			init('/wasm/package_bg.wasm');
-		</script>
 		<script src="./vendor/react.min.js"></script>
 		<script src="./vendor/react-dom.min.js"></script>
 		<script src="./vendor/react-dom-server.min.js"></script>
@@ -18,5 +15,12 @@
 		<script src="./vendor/slate-history.min.js"></script>
 		<script src="./vendor/slate-react.min.js"></script>
 		<script src="./slate_shim.js"></script>
+		<script type="module">
+			import init, { start } from '/wasm/package.js';
+			init('/wasm/package_bg.wasm').then(() => {
+				const [update_content] = start();
+				window.update_content = update_content;
+			});
+		</script>
 	</body>
 </html>
