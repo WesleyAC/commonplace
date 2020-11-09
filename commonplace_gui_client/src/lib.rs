@@ -162,24 +162,24 @@ fn view(model: &Model) -> Node<Msg> {
         C!["flex"],
         div![
             id!["sidebar"],
-            C!["h-screen", "overflow-y-scroll", "top-0", "sticky", "p-4", "bg-gray-500"],
+            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "bg-gray-500"],
             IF![
                 model.tag_tree.is_some() =>
-                tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes)
+                tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes, &model.current_note)
             ],
         ],
         div![
-            C!["flex", "flex-col", "flex-grow", "p-4", "bg-gray-100"],
+            C!["h-screen", "flex", "flex-col", "flex-grow", "p-4", "bg-gray-100"],
             div![IF![model.current_note.is_some() => note_title_view(&model)]],
             div![
-                C!["flex-grow"],
+                C!["flex-grow", "overflow-y-auto"],
                 id!["editor"],
             ],
         ],
     ]
 }
 
-fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>) -> Node<Msg> {
+fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>, current_note: &Option<Uuid>) -> Node<Msg> {
     ul![
         tag_tree.iter().map(|tag| {
             li![
@@ -188,14 +188,15 @@ fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, note
                     C!["focus:outline-none"],
                     &tag.name,
                     ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
+                    ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
                 ],
-                tree_view(&tag.children, tag_tree_folds, notes),
+                tree_view(&tag.children, tag_tree_folds, notes, current_note),
                 ul![
                     tag.notes.iter().map(|note| {
                         li![
                             C!["note"],
                             button![
-                                C!["focus:outline-none"],
+                                C!["focus:outline-none", IF![Some(note) == current_note.as_ref() => "font-bold"]],
                                 notes.get(&note).map(|x| x.name.as_str()),
                                 //&note,
                                 ev(Ev::Click, enc!((note) move |_| Msg::OpenNote(note))),
