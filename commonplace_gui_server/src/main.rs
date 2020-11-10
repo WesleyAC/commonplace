@@ -1,10 +1,11 @@
 use rouille::{Request, Response};
-use libcommonplace::{Note, open_db, get_all_notes, get_tag_tree, rename_note, update_note_bytes};
+use libcommonplace::{Note, add_note, open_db, get_all_notes, get_tag_tree, rename_note, update_note_bytes};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
 use std::str::FromStr;
 use std::io::Read;
+use std::path::PathBuf;
 
 #[derive(RustEmbed)]
 #[folder = "../commonplace_gui_client/static/"]
@@ -92,6 +93,15 @@ fn handle_get_notes() -> Response {
     }
 }
 
+fn handle_new_note() -> Response {
+    let db = open_db().unwrap();
+    if let Ok(uuid) = add_note(&db, "new_note".to_string(), PathBuf::from(r"/dev/null")) {
+        Response::from_data("application/json", serde_json::to_vec(&uuid).unwrap())
+    } else {
+        Response::empty_404()
+    }
+}
+
 #[macro_use]
 extern crate rouille;
 
@@ -105,6 +115,7 @@ fn main() {
             ("GET", &["api", "blob", hash]) => handle_get_blob(hash),
             ("GET", &["api", "note", uuid]) => handle_get_note(uuid),
             ("GET", path) => handle_static(path.join("/")),
+            ("POST", &["api", "note", "new"]) => handle_new_note(),
             ("POST", &["api", "note", uuid, "rename"]) => {
                 let mut body = vec![];
                 request.data().unwrap().read_to_end(&mut body);

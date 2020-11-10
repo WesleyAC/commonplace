@@ -21,6 +21,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         notes: HashMap::new(),
         current_note: None,
         note_text: None,
+        should_reload_slate: false,
     }
 }
 
@@ -30,6 +31,7 @@ struct Model {
     notes: HashMap<Uuid, Note>,
     current_note: Option<Uuid>,
     note_text: Option<String>,
+    should_reload_slate: bool, // this is a hack.
 }
 
 enum Msg {
@@ -42,6 +44,7 @@ enum Msg {
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
+    NewNote,
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -54,6 +57,9 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::UpdateTagTree((tag_tree, notes)) => {
             model.tag_tree = Some(tag_tree);
             model.notes = notes;
+            if model.should_reload_slate {
+                orders.send_msg(Msg::OpenNote(model.current_note.unwrap()));
+            }
         },
         Msg::ToggleTag(uuid) => {
             *model.tag_tree_folds.entry(uuid).or_insert(true) ^= true;
@@ -64,9 +70,13 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 orders.perform_cmd(enc!((hash) async move {
                     get_blob(&hex::encode(&hash)).await.map(|b| Msg::NoteBlobLoaded(b)).ok()
                 }));
+            } else {
+                model.should_reload_slate = true;
+                orders.send_msg(Msg::RequestUpdateTagTree);
             }
         },
         Msg::NoteBlobLoaded(blob) => {
+            model.should_reload_slate = false;
             update_slate(&blob);
         },
         Msg::RenameNote((uuid, name)) => {
@@ -88,6 +98,11 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 _ => {},
             }
         },
+        Msg::NewNote => {
+            orders.perform_cmd(async {
+                new_note().await.map(|n| Msg::OpenNote(n)).ok()
+            });
+        },
         Msg::UpdateNoteText(text) => {
             model.note_text = Some(text);
         }
@@ -95,6 +110,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             orders.skip();
             match (event.ctrl_key(), event.key().as_str()) {
                 (true, "n") => {
+                    orders.send_msg(Msg::NewNote);
                     event.prevent_default();
                 },
                 (true, "s") => {
@@ -145,6 +161,18 @@ async fn rename_note(uuid: Uuid, name: String) -> Result<(), ()> {
         .await.map_err(|e| { log!(e); })?
         .check_status().map_err(|e| { log!(e); })?;
     Ok(())
+}
+
+async fn new_note() -> Result<Uuid, ()> {
+    let bytes = Request::new("/api/note/new")
+        .method(Method::Post)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?
+        .bytes().map_err(|e| { log!(e) }).await?;
+    let uuid = serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })?;
+    log!(uuid);
+    Ok(uuid)
 }
 
 async fn update_note_text(uuid: Uuid, text: String) -> Result<(), ()> {
@@ -198,7 +226,6 @@ fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, note
                             button![
                                 C!["focus:outline-none", IF![Some(note) == current_note.as_ref() => "font-bold"]],
                                 notes.get(&note).map(|x| x.name.as_str()),
-                                //&note,
                                 ev(Ev::Click, enc!((note) move |_| Msg::OpenNote(note))),
                             ],
                         ]
