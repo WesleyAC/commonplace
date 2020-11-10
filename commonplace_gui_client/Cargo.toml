@@ -11,9 +11,7 @@ crate-type = ["cdylib"]
 wasm-bindgen-test = "0.3.13"
 
 [dependencies]
-# This commit points to Seed 0.7.0 with important fixes.
-# Replace with `seed = "0.8.0"` (or newer) once released.
-seed = { git = "https://github.com/seed-rs/seed", rev = "0a538f0" }
+seed = "0.8.0"
 libcommonplace_types = { path = "../libcommonplace/types/" }
 uuid = { version = "0.8.1", features = [ "v4", "serde" ] }
 serde = "1.0"
