@@ -12,7 +12,6 @@ use std::path::PathBuf;
 struct StaticFiles;
 
 fn handle_static(path: String) -> Response {
-    println!("{}", path);
     let mimetype = match path.split(".").last() {
         Some("html") => "text/html",
         Some("js") => "text/javascript",
