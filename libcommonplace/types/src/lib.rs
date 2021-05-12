@@ -2,19 +2,43 @@ use std::fmt;
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
 
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(transparent)]
+pub struct NoteId {
+    pub uuid: Uuid,
+}
+
+impl fmt::Display for NoteId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.uuid)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(transparent)]
+pub struct TagId {
+    pub uuid: Uuid,
+}
+
+impl fmt::Display for TagId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.uuid)
+    }
+}
+
 #[derive(Debug)]
 pub struct TagRow {
-    pub id: Uuid,
+    pub id: TagId,
     pub name: String,
-    pub parent: Option<Uuid>,
+    pub parent: Option<TagId>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TagTree {
-    pub id: Uuid,
+    pub id: TagId,
     pub name: String,
     pub children: Vec<TagTree>,
-    pub notes: Vec<Uuid>,
+    pub notes: Vec<NoteId>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -52,7 +76,7 @@ impl fmt::Display for TagTree {
     }
 }
 
-pub fn get_tags_for_note(tag_tree: &Vec<TagTree>, note: &Uuid) -> Vec<Uuid> {
+pub fn get_tags_for_note(tag_tree: &Vec<TagTree>, note: &NoteId) -> Vec<TagId> {
     let mut out = vec![];
     for tag_tree in tag_tree {
         for try_note in &tag_tree.notes {
@@ -66,7 +90,7 @@ pub fn get_tags_for_note(tag_tree: &Vec<TagTree>, note: &Uuid) -> Vec<Uuid> {
     out
 }
 
-pub fn get_tag_name(tag_tree: &Vec<TagTree>, tag: &Uuid) -> Option<Vec<String>> {
+pub fn get_tag_name(tag_tree: &Vec<TagTree>, tag: &TagId) -> Option<Vec<String>> {
     for tag_tree in tag_tree {
         let mut out = vec![];
         out.push(tag_tree.name.clone());

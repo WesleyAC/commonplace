@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::Write;
 use rusqlite::params;
 use uuid::Uuid;
-pub use libcommonplace_types::{TagRow, TagTree, Note};
+pub use libcommonplace_types::{TagId, NoteId, TagRow, TagTree, Note};
 
 pub use rusqlite::Connection;
 
@@ -27,7 +27,7 @@ impl From<rusqlite::Error> for CommonplaceError {
     }
 }
 
-fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(Uuid, Uuid)>, root_id: Option<Uuid>) -> Vec<TagTree> {
+fn get_tag_tree_internal(tag_rows: &Vec<TagRow>, tagmap_rows: &Vec<(TagId, NoteId)>, root_id: Option<TagId>) -> Vec<TagTree> {
     let mut children = vec![];
 
     for tag_row in tag_rows {
@@ -54,15 +54,21 @@ pub fn get_tag_tree(db: &Connection) -> Result<Vec<TagTree>, CommonplaceError> {
     let mut tag_query = db.prepare("SELECT id, name, parent FROM Tags")?;
     let tag_rows = tag_query.query_map(params![], |row| {
         Ok(TagRow {
-            id: row.get("id")?,
+            id: TagId { uuid: row.get("id")? },
             name: row.get("name")?,
-            parent: row.get("parent")?,
+            parent: {
+                let parent_uuid = row.get("parent")?;
+                match parent_uuid {
+                    Some(uuid) => Some(TagId { uuid }),
+                    None => None,
+                }
+            }
         })
     })?.map(|x| x.unwrap()).collect();
 
     let mut tagmap_query = db.prepare("SELECT tag_id, note_id FROM TagMap")?;
-    let tagmap_rows: Vec<(Uuid, Uuid)> = tagmap_query.query_map(params![], |row| {
-        Ok((row.get("tag_id")?, row.get("note_id")?))
+    let tagmap_rows: Vec<(TagId, NoteId)> = tagmap_query.query_map(params![], |row| {
+        Ok((TagId { uuid: row.get("tag_id")? }, NoteId { uuid: row.get("note_id")?}))
     })?.map(|x| x.unwrap()).collect();
 
     Ok(get_tag_tree_internal(&tag_rows, &tagmap_rows, None))

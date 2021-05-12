@@ -2,12 +2,11 @@
 
 use seed::{prelude::*, *};
 
-use uuid::Uuid;
 use enclose::enc;
 
 use std::collections::HashMap;
 
-use libcommonplace_types::{Note, TagTree, get_tags_for_note, get_tag_name};
+use libcommonplace_types::{NoteId, TagId, Note, TagTree, get_tags_for_note, get_tag_name};
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.stream(streams::window_event(Ev::KeyDown, |event| {
@@ -29,11 +28,11 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 
 struct Model {
     tag_tree: Option<Vec<TagTree>>,
-    tag_tree_folds: HashMap<Uuid, bool>,
+    tag_tree_folds: HashMap<TagId, bool>,
     sidebar_tab: SidebarTab,
-    notes: HashMap<Uuid, Note>,
-    untagged_notes: Vec<Uuid>,
-    current_note: Option<Uuid>,
+    notes: HashMap<NoteId, Note>,
+    untagged_notes: Vec<NoteId>,
+    current_note: Option<NoteId>,
     note_text: Option<String>,
     should_reload_slate: bool, // this is a hack.
 }
@@ -46,11 +45,11 @@ enum SidebarTab {
 
 enum Msg {
     RequestUpdateTagTree,
-    UpdateTagTree((Vec<TagTree>, HashMap<Uuid, Note>, Vec<Uuid>)),
-    ToggleTag(Uuid),
-    OpenNote(Uuid),
+    UpdateTagTree((Vec<TagTree>, HashMap<NoteId, Note>, Vec<NoteId>)),
+    ToggleTag(TagId),
+    OpenNote(NoteId),
     NoteBlobLoaded(String),
-    RenameNote((Option<Uuid>, String)),
+    RenameNote((Option<NoteId>, String)),
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
@@ -138,7 +137,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<Uuid, Note>, Vec<Uuid>), ()> {
+async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<NoteId, Note>, Vec<NoteId>), ()> {
     let bytes = Request::new("/api/showtree")
         .method(Method::Get)
         .fetch()
@@ -176,7 +175,7 @@ async fn get_blob(hash: &str) -> Result<String, ()> {
     String::from_utf8(bytes).map_err(|e| { log!(e) })
 }
 
-async fn rename_note(uuid: Uuid, name: String) -> Result<(), ()> {
+async fn rename_note(uuid: NoteId, name: String) -> Result<(), ()> {
     Request::new(format!("/api/note/{}/rename", uuid))
         .method(Method::Post)
         .body(name.into())
@@ -186,7 +185,7 @@ async fn rename_note(uuid: Uuid, name: String) -> Result<(), ()> {
     Ok(())
 }
 
-async fn new_note() -> Result<Uuid, ()> {
+async fn new_note() -> Result<NoteId, ()> {
     let bytes = Request::new("/api/note/new")
         .method(Method::Post)
         .fetch()
@@ -198,7 +197,7 @@ async fn new_note() -> Result<Uuid, ()> {
     Ok(uuid)
 }
 
-async fn update_note_text(uuid: Uuid, text: String) -> Result<(), ()> {
+async fn update_note_text(uuid: NoteId, text: String) -> Result<(), ()> {
     Request::new(format!("/api/note/{}", uuid))
         .method(Method::Post)
         .text(text)
@@ -245,13 +244,20 @@ fn view(model: &Model) -> Node<Msg> {
                         C!["tagbubble"],
                         get_tag_name(&model.tag_tree.as_ref().unwrap(), &tag).unwrap().iter().map(|part| div![part])
                     ]
-                })
+                }),
+                input![
+                    C!["w-full"],
+                    attrs!{
+                        At::Type => "text",
+                        At::Placeholder => "Add tag",
+                    }
+                ]
             ]]
         ],
     ]
 }
 
-fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>, current_note: &Option<Uuid>) -> Node<Msg> {
+fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<TagId, bool>, notes: &HashMap<NoteId, Note>, current_note: &Option<NoteId>) -> Node<Msg> {
     ul![
         tag_tree.iter().map(|tag| {
             li![
@@ -277,7 +283,7 @@ fn untagged_list_view(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn note_item_view(uuid: Uuid, note: &Note, current_note: &Option<Uuid>) -> Node<Msg> {
+fn note_item_view(uuid: NoteId, note: &Note, current_note: &Option<NoteId>) -> Node<Msg> {
     li![
         C!["note"],
         button![
