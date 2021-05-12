@@ -4,7 +4,6 @@ Commonplace is a notetaking program. It is a work in progress, I don't recommend
 
 ## TODO
 
-* Auto-save
 * Add ability to create tags
 * Add ability to delete tags
 * Switch to using sqlite for blob storage

@@ -22,6 +22,7 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
         untagged_notes: vec![],
         current_note: None,
         note_text: None,
+        note_dirty: false,
         should_reload_slate: false,
     }
 }
@@ -34,6 +35,7 @@ struct Model {
     untagged_notes: Vec<NoteId>,
     current_note: Option<NoteId>,
     note_text: Option<String>,
+    note_dirty: bool,
     should_reload_slate: bool, // this is a hack.
 }
 
@@ -78,14 +80,20 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             *model.tag_tree_folds.entry(uuid).or_insert(true) ^= true;
         },
         Msg::OpenNote(note) => {
-            model.current_note = Some(note);
-            if let Some(hash) = model.notes.get(&note).map(|x| x.hash) {
-                orders.perform_cmd(enc!((hash) async move {
-                    get_blob(&hex::encode(&hash)).await.map(|b| Msg::NoteBlobLoaded(b)).ok()
-                }));
+            if model.note_dirty {
+                orders.send_msg(Msg::SaveNote);
+                orders.send_msg(Msg::OpenNote(note));
+                model.note_dirty = false;
             } else {
-                model.should_reload_slate = true;
-                orders.send_msg(Msg::RequestUpdateTagTree);
+                model.current_note = Some(note);
+                if let Some(hash) = model.notes.get(&note).map(|x| x.hash) {
+                    orders.perform_cmd(enc!((hash) async move {
+                        get_blob(&hex::encode(&hash)).await.map(|b| Msg::NoteBlobLoaded(b)).ok()
+                    }));
+                } else {
+                    model.should_reload_slate = true;
+                    orders.send_msg(Msg::RequestUpdateTagTree);
+                }
             }
         },
         Msg::NoteBlobLoaded(blob) => {
@@ -133,6 +141,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         },
         Msg::UpdateNoteText(text) => {
             model.note_text = Some(text);
+            model.note_dirty = true;
         },
         Msg::KeyPressed(event) => {
             orders.skip();
