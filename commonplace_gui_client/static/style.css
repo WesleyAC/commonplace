@@ -34,5 +34,5 @@
 }
 
 .tagbubble > div:not(:last-child)::after {
-  content: "::";
+  content: ">";
 }

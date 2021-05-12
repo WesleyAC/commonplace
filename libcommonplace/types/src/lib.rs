@@ -33,7 +33,7 @@ pub struct TagRow {
     pub parent: Option<TagId>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TagTree {
     pub id: TagId,
     pub name: String,
@@ -103,4 +103,19 @@ pub fn get_tag_name(tag_tree: &Vec<TagTree>, tag: &TagId) -> Option<Vec<String>>
         }
     }
     return None
+}
+
+pub fn get_tag_by_full_name(tag_tree: &Vec<TagTree>, name: Vec<&str>) -> Option<TagId> {
+    if let Some((head, tail)) = name.split_first() {
+        for tag_tree in tag_tree {
+            if &tag_tree.name == head {
+                if tail.len() == 0 {
+                    return Some(tag_tree.id);
+                } else {
+                    return get_tag_by_full_name(&tag_tree.children, tail.to_vec())
+                }
+            }
+        }
+    }
+    None
 }

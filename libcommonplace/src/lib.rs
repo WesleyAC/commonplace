@@ -9,6 +9,9 @@ pub use libcommonplace_types::{TagId, NoteId, TagRow, TagTree, Note};
 
 pub use rusqlite::Connection;
 
+// This file has all of the stuff that touches sqlite, look at libcommonplace_types for more
+// general functions.
+
 #[derive(Debug)]
 pub enum CommonplaceError {
     Sqlite(rusqlite::Error),
@@ -175,6 +178,11 @@ pub fn delete_tag(db: &Connection, tag: Vec<String>) -> Result<(), CommonplaceEr
     let id = get_tag_id_by_name(db, tag)?;
     db.execute("DELETE FROM Tags WHERE id = ?1", params![id])?;
 
+    Ok(())
+}
+
+pub fn tag_note_by_uuid(db: &Connection, note: Uuid, tag_id: Uuid) -> Result<(), CommonplaceError> {
+    db.execute("INSERT INTO TagMap (note_id, tag_id) VALUES (?1, ?2)", params![note, tag_id])?;
     Ok(())
 }
 

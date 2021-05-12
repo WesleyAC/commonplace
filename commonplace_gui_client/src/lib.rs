@@ -6,7 +6,7 @@ use enclose::enc;
 
 use std::collections::HashMap;
 
-use libcommonplace_types::{NoteId, TagId, Note, TagTree, get_tags_for_note, get_tag_name};
+use libcommonplace_types::{NoteId, TagId, Note, TagTree, get_tags_for_note, get_tag_name, get_tag_by_full_name};
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.stream(streams::window_event(Ev::KeyDown, |event| {
@@ -50,6 +50,7 @@ enum Msg {
     OpenNote(NoteId),
     NoteBlobLoaded(String),
     RenameNote((Option<NoteId>, String)),
+    AddTagToNote((NoteId, TagId)),
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
@@ -98,6 +99,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 });
             }
         },
+        Msg::AddTagToNote((note, tag)) => {
+            orders.skip().perform_cmd(async move {
+                add_tag_to_note(note, tag).await;
+                Msg::RequestUpdateTagTree
+            });
+        }
         Msg::SaveNote => {
             match (model.current_note, model.note_text.as_ref()) {
                 (Some(uuid), Some(text)) => {
@@ -185,6 +192,15 @@ async fn rename_note(uuid: NoteId, name: String) -> Result<(), ()> {
     Ok(())
 }
 
+async fn add_tag_to_note(note: NoteId, tag: TagId) -> Result<(), ()> {
+    Request::new(format!("/api/note/{}/tag/{}", note, tag))
+        .method(Method::Post)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?;
+    Ok(())
+}
+
 async fn new_note() -> Result<NoteId, ()> {
     let bytes = Request::new("/api/note/new")
         .method(Method::Post)
@@ -250,7 +266,21 @@ fn view(model: &Model) -> Node<Msg> {
                     attrs!{
                         At::Type => "text",
                         At::Placeholder => "Add tag",
-                    }
+                    },
+                    keyboard_ev(Ev::KeyDown, enc!((
+                        model.current_note => note,
+                        model.tag_tree => tag_tree,
+                    ) move |event| {
+                        if event.key() == "Enter" {
+                            let tag = get_tag_by_full_name(&tag_tree.unwrap(), to_input(&event.current_target().unwrap()).value().split(">").collect());
+                            if let Some(note) = note {
+                                if let Some(tag) = tag {
+                                    return Some(Msg::AddTagToNote((note, tag)))
+                                }
+                            }
+                        }
+                        None
+                    })),
                 ]
             ]]
         ],
