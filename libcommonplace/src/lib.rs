@@ -91,6 +91,14 @@ pub fn get_all_notes(db: &Connection) -> Result<HashMap<Uuid, Note>, Commonplace
     Ok(res)
 }
 
+pub fn get_untagged_notes(db: &Connection) -> Result<Vec<Uuid>, CommonplaceError> {
+    let mut query = db.prepare("SELECT Notes.id FROM Notes LEFT JOIN TagMap ON Notes.id = TagMap.note_id WHERE TagMap.tag_id is NULL")?;
+    let res = query.query_map(params![], |row| {
+        row.get("id")
+    })?.map(|x| x.unwrap()).collect();
+    Ok(res)
+}
+
 pub fn init_memex(db: &Connection) -> Result<(), CommonplaceError> {
     db.execute_batch(include_str!("setup.sql"))?;
 

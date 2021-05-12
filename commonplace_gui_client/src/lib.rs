@@ -18,7 +18,9 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     Model {
         tag_tree: None,
         tag_tree_folds: HashMap::new(),
+        sidebar_tab: SidebarTab::TagTree,
         notes: HashMap::new(),
+        untagged_notes: vec![],
         current_note: None,
         note_text: None,
         should_reload_slate: false,
@@ -28,15 +30,23 @@ fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
 struct Model {
     tag_tree: Option<Vec<TagTree>>,
     tag_tree_folds: HashMap<Uuid, bool>,
+    sidebar_tab: SidebarTab,
     notes: HashMap<Uuid, Note>,
+    untagged_notes: Vec<Uuid>,
     current_note: Option<Uuid>,
     note_text: Option<String>,
     should_reload_slate: bool, // this is a hack.
 }
 
+#[derive(PartialEq)]
+enum SidebarTab {
+    TagTree,
+    Untagged,
+}
+
 enum Msg {
     RequestUpdateTagTree,
-    UpdateTagTree((Vec<TagTree>, HashMap<Uuid, Note>)),
+    UpdateTagTree((Vec<TagTree>, HashMap<Uuid, Note>, Vec<Uuid>)),
     ToggleTag(Uuid),
     OpenNote(Uuid),
     NoteBlobLoaded(String),
@@ -45,6 +55,7 @@ enum Msg {
     UpdateNoteText(String),
     SaveNote,
     NewNote,
+    SidebarShow(SidebarTab),
 }
 
 fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
@@ -54,9 +65,10 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 get_tag_tree().await.map(|t| Msg::UpdateTagTree(t)).ok()
             });
         },
-        Msg::UpdateTagTree((tag_tree, notes)) => {
+        Msg::UpdateTagTree((tag_tree, notes, untagged_notes)) => {
             model.tag_tree = Some(tag_tree);
             model.notes = notes;
+            model.untagged_notes = untagged_notes;
             if model.should_reload_slate {
                 orders.send_msg(Msg::OpenNote(model.current_note.unwrap()));
             }
@@ -103,9 +115,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
                 new_note().await.map(|n| Msg::OpenNote(n)).ok()
             });
         },
+        Msg::SidebarShow(tab) => {
+            model.sidebar_tab = tab;
+        },
         Msg::UpdateNoteText(text) => {
             model.note_text = Some(text);
-        }
+        },
         Msg::KeyPressed(event) => {
             orders.skip();
             match (event.ctrl_key(), event.key().as_str()) {
@@ -123,7 +138,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
     }
 }
 
-async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<Uuid, Note>), ()> {
+async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<Uuid, Note>, Vec<Uuid>), ()> {
     let bytes = Request::new("/api/showtree")
         .method(Method::Get)
         .fetch()
@@ -140,7 +155,15 @@ async fn get_tag_tree() -> Result<(Vec<TagTree>, HashMap<Uuid, Note>), ()> {
         .bytes().map_err(|e| { log!(e) }).await?;
     let notes = serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })?;
 
-    Ok((tree, notes))
+    let bytes = Request::new("/api/notes/untagged")
+        .method(Method::Get)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?
+        .bytes().map_err(|e| { log!(e) }).await?;
+    let untagged_notes = serde_json::from_slice(&bytes[..]).map_err(|e| { log!(e) })?;
+
+    Ok((tree, notes, untagged_notes))
 }
 
 async fn get_blob(hash: &str) -> Result<String, ()> {
@@ -190,10 +213,18 @@ fn view(model: &Model) -> Node<Msg> {
         C!["flex"],
         div![
             id!["sidebar"],
-            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "bg-gray-500"],
+            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "w-64", "bg-gray-500"],
+            div![
+                button![C!["w-1/2", "border", "border-black"], "tree", ev(Ev::Click, |_| Msg::SidebarShow(SidebarTab::TagTree))],
+                button![C!["w-1/2", "border", "border-black"], "untagged", ev(Ev::Click, |_| Msg::SidebarShow(SidebarTab::Untagged))],
+            ],
             IF![
-                model.tag_tree.is_some() =>
-                tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes, &model.current_note)
+                model.tag_tree.is_some() && model.sidebar_tab == SidebarTab::TagTree =>
+                tag_tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes, &model.current_note)
+            ],
+            IF![
+                model.sidebar_tab == SidebarTab::Untagged =>
+                untagged_list_view(&model)
             ],
         ],
         div![
@@ -207,7 +238,7 @@ fn view(model: &Model) -> Node<Msg> {
     ]
 }
 
-fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>, current_note: &Option<Uuid>) -> Node<Msg> {
+fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, notes: &HashMap<Uuid, Note>, current_note: &Option<Uuid>) -> Node<Msg> {
     ul![
         tag_tree.iter().map(|tag| {
             li![
@@ -218,21 +249,29 @@ fn tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<Uuid, bool>, note
                     ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
                     ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
                 ],
-                tree_view(&tag.children, tag_tree_folds, notes, current_note),
+                tag_tree_view(&tag.children, tag_tree_folds, notes, current_note),
                 ul![
-                    tag.notes.iter().map(|note| {
-                        li![
-                            C!["note"],
-                            button![
-                                C!["focus:outline-none", IF![Some(note) == current_note.as_ref() => "font-bold"]],
-                                notes.get(&note).map(|x| x.name.as_str()),
-                                ev(Ev::Click, enc!((note) move |_| Msg::OpenNote(note))),
-                            ],
-                        ]
-                    }).collect::<Vec<Node<Msg>>>(),
+                    tag.notes.iter().map(|uuid| { note_item_view(*uuid, notes.get(&uuid).unwrap(), current_note) }).collect::<Vec<Node<Msg>>>(),
                 ],
             ]
         }).collect::<Vec<Node<Msg>>>()
+    ]
+}
+
+fn untagged_list_view(model: &Model) -> Node<Msg> {
+    ul![
+        model.untagged_notes.iter().map(|uuid| { note_item_view(*uuid, model.notes.get(&uuid).unwrap(), &model.current_note) }).collect::<Vec<Node<Msg>>>()
+    ]
+}
+
+fn note_item_view(uuid: Uuid, note: &Note, current_note: &Option<Uuid>) -> Node<Msg> {
+    li![
+        C!["note"],
+        button![
+            C!["focus:outline-none", IF![Some(uuid) == *current_note => "font-bold"]],
+            note.name.as_str(),
+            ev(Ev::Click, enc!((uuid) move |_| Msg::OpenNote(uuid))),
+        ],
     ]
 }
 

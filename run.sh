@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 $(dirname $0)/build.sh $@
 
 ( $(dirname $0)/target/debug/commonplace_gui_server ) &

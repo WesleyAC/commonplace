@@ -1,5 +1,5 @@
 use rouille::{Request, Response};
-use libcommonplace::{Note, add_note, open_db, get_all_notes, get_tag_tree, rename_note, update_note_bytes};
+use libcommonplace::{Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
@@ -92,6 +92,15 @@ fn handle_get_notes() -> Response {
     }
 }
 
+fn handle_get_untagged_notes() -> Response {
+    let db = open_db().unwrap();
+    if let Ok(notes) = get_untagged_notes(&db) {
+        Response::from_data("application/json", serde_json::to_vec(&notes).unwrap())
+    } else {
+        Response::empty_404()
+    }
+}
+
 fn handle_new_note() -> Response {
     let db = open_db().unwrap();
     if let Ok(uuid) = add_note(&db, "new_note".to_string(), PathBuf::from(r"/dev/null")) {
@@ -111,6 +120,7 @@ fn main() {
         match (request.method(), &path[..]) {
             ("GET", &["api", "showtree"]) => handle_show_tree(),
             ("GET", &["api", "notes"]) => handle_get_notes(),
+            ("GET", &["api", "notes", "untagged"]) => handle_get_untagged_notes(),
             ("GET", &["api", "blob", hash]) => handle_get_blob(hash),
             ("GET", &["api", "note", uuid]) => handle_get_note(uuid),
             ("GET", path) => handle_static(path.join("/")),
