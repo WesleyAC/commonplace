@@ -51,3 +51,32 @@ impl fmt::Display for TagTree {
         self.pretty_print(f, 0)
     }
 }
+
+pub fn get_tags_for_note(tag_tree: &Vec<TagTree>, note: &Uuid) -> Vec<Uuid> {
+    let mut out = vec![];
+    for tag_tree in tag_tree {
+        for try_note in &tag_tree.notes {
+            if try_note == note {
+                out.push(tag_tree.id);
+            }
+        }
+        out.append(&mut get_tags_for_note(&tag_tree.children, note));
+    }
+
+    out
+}
+
+pub fn get_tag_name(tag_tree: &Vec<TagTree>, tag: &Uuid) -> Option<Vec<String>> {
+    for tag_tree in tag_tree {
+        let mut out = vec![];
+        out.push(tag_tree.name.clone());
+        if &tag_tree.id == tag {
+            return Some(out)
+        }
+        if let Some(mut name) = get_tag_name(&tag_tree.children, tag) {
+            out.append(&mut name);
+            return Some(out);
+        }
+    }
+    return None
+}

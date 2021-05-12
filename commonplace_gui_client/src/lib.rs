@@ -7,7 +7,7 @@ use enclose::enc;
 
 use std::collections::HashMap;
 
-use libcommonplace_types::{Note, TagTree};
+use libcommonplace_types::{Note, TagTree, get_tags_for_note, get_tag_name};
 
 fn init(_: Url, orders: &mut impl Orders<Msg>) -> Model {
     orders.stream(streams::window_event(Ev::KeyDown, |event| {
@@ -212,8 +212,8 @@ fn view(model: &Model) -> Node<Msg> {
     div![
         C!["flex"],
         div![
-            id!["sidebar"],
-            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "w-64", "bg-gray-500"],
+            id!["left-sidebar"],
+            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "bg-gray-500"],
             div![
                 button![C!["w-1/2", "border", "border-black"], "tree", ev(Ev::Click, |_| Msg::SidebarShow(SidebarTab::TagTree))],
                 button![C!["w-1/2", "border", "border-black"], "untagged", ev(Ev::Click, |_| Msg::SidebarShow(SidebarTab::Untagged))],
@@ -234,6 +234,19 @@ fn view(model: &Model) -> Node<Msg> {
                 C!["flex-grow", "overflow-y-auto"],
                 id!["editor"],
             ],
+        ],
+        div![
+            id!["right-sidebar"],
+            C!["h-screen", "overflow-y-auto", "top-0", "sticky", "p-4", "bg-gray-500"],
+            IF![model.current_note.is_some() && model.tag_tree.is_some() => div![
+                div![C!["text-2xl"], "tags"],
+                get_tags_for_note(&model.tag_tree.as_ref().unwrap(), &model.current_note.unwrap()).iter().map(| tag | {
+                    div![
+                        C!["tagbubble"],
+                        get_tag_name(&model.tag_tree.as_ref().unwrap(), &tag).unwrap().iter().map(|part| div![part])
+                    ]
+                })
+            ]]
         ],
     ]
 }
