@@ -7,7 +7,7 @@ for arg in "$@"
 do
     case $arg in
         --release)
-	BUILD_MODE=build_release
+        BUILD_MODE=build_release
         BUILD_MODE_FLAG=--release
         shift
         ;;
