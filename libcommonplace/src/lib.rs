@@ -186,6 +186,11 @@ pub fn tag_note_by_uuid(db: &Connection, note: Uuid, tag_id: Uuid) -> Result<(),
     Ok(())
 }
 
+pub fn untag_note_by_uuid(db: &Connection, note: Uuid, tag_id: Uuid) -> Result<(), CommonplaceError> {
+    db.execute("DELETE FROM TagMap WHERE note_id = ?1 AND tag_id = ?2", params![note, tag_id])?;
+    Ok(())
+}
+
 pub fn tag_note(db: &Connection, note: Uuid, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let tag_id = get_tag_id_by_name(db, tag)?;
     db.execute("INSERT INTO TagMap (note_id, tag_id) VALUES (?1, ?2)", params![note, tag_id])?;

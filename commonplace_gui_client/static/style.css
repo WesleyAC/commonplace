@@ -33,6 +33,10 @@
   background-color: white;
 }
 
-.tagbubble > div:not(:last-child)::after {
+.tagbubble-inner {
+  display: flex;
+}
+
+.tagbubble-inner > div:not(:last-child)::after {
   content: ">";
 }

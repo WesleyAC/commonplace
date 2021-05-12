@@ -1,5 +1,5 @@
 use rouille::{Request, Response};
-use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid};
+use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid, untag_note_by_uuid};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
@@ -122,6 +122,18 @@ fn handle_note_add_tag(note_id: &str, tag_id: &str) -> Response {
     }
 }
 
+fn handle_note_delete_tag(note_id: &str, tag_id: &str) -> Response {
+    let db = open_db().unwrap();
+    let note_id = Uuid::from_str(note_id);
+    let tag_id = Uuid::from_str(tag_id);
+    if let (Ok(note_id), Ok(tag_id)) = (note_id, tag_id) {
+        untag_note_by_uuid(&db, note_id, tag_id);
+        Response::empty_204()
+    } else {
+        Response::empty_404()
+    }
+}
+
 #[macro_use]
 extern crate rouille;
 
@@ -148,6 +160,7 @@ fn main() {
                 request.data().unwrap().read_to_end(&mut body);
                 handle_update_note(body, uuid)
             },
+            ("DELETE", &["api", "note", note_id, "tag", tag_id]) => handle_note_delete_tag(note_id, tag_id),
 
             _ => rouille::Response::empty_404()
         }

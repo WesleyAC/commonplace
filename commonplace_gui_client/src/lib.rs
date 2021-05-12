@@ -51,6 +51,7 @@ enum Msg {
     NoteBlobLoaded(String),
     RenameNote((Option<NoteId>, String)),
     AddTagToNote((NoteId, TagId)),
+    UntagNote((NoteId, TagId)),
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
@@ -102,6 +103,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::AddTagToNote((note, tag)) => {
             orders.skip().perform_cmd(async move {
                 add_tag_to_note(note, tag).await;
+                Msg::RequestUpdateTagTree
+            });
+        }
+        Msg::UntagNote((note, tag)) => {
+            orders.skip().perform_cmd(async move {
+                untag_note(note, tag).await;
                 Msg::RequestUpdateTagTree
             });
         }
@@ -201,6 +208,15 @@ async fn add_tag_to_note(note: NoteId, tag: TagId) -> Result<(), ()> {
     Ok(())
 }
 
+async fn untag_note(note: NoteId, tag: TagId) -> Result<(), ()> {
+    Request::new(format!("/api/note/{}/tag/{}", note, tag))
+        .method(Method::Delete)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?;
+    Ok(())
+}
+
 async fn new_note() -> Result<NoteId, ()> {
     let bytes = Request::new("/api/note/new")
         .method(Method::Post)
@@ -258,7 +274,21 @@ fn view(model: &Model) -> Node<Msg> {
                 get_tags_for_note(&model.tag_tree.as_ref().unwrap(), &model.current_note.unwrap()).iter().map(| tag | {
                     div![
                         C!["tagbubble"],
-                        get_tag_name(&model.tag_tree.as_ref().unwrap(), &tag).unwrap().iter().map(|part| div![part])
+                        div![
+                            C!["tagbubble-inner"],
+                            get_tag_name(&model.tag_tree.as_ref().unwrap(), &tag).unwrap().iter().map(|part| div![part]),
+                        ],
+                        button![
+                            C!["ml-auto"],
+                            "(untag)",
+                            ev(Ev::Click, enc!((model.current_note => note, tag) move |_event| {
+                                if let Some(note) = note {
+                                    Some(Msg::UntagNote((note, tag)))
+                                } else {
+                                    None
+                                }
+                            })),
+                        ],
                     ]
                 }),
                 input![
