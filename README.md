@@ -63,3 +63,4 @@ One cannot escape conflict completely, unfortunately — however, building on to
 * Add "plain"text import/export
 * Support for images
 * Support for PDFs
+* Add random color to every note
