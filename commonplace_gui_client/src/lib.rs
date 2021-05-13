@@ -371,27 +371,46 @@ fn view(model: &Model) -> Node<Msg> {
 
 fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<TagId, bool>, notes: &HashMap<NoteId, Note>, current_note: &Option<NoteId>) -> Node<Msg> {
     ul![
-        tag_tree.iter().map(|tag| {
-            li![
-                IF![!tag_tree_folds.get(&tag.id).unwrap_or(&true) => C!["tree-closed"]],
-                button![
-                    C!["focus:outline-none"],
-                    &tag.name,
-                    ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
-                    ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
-                ],
-                tag_tree_view(&tag.children, tag_tree_folds, notes, current_note),
-                ul![
-                    tag.notes.iter().map(|uuid| { note_item_view(*uuid, notes.get(&uuid).unwrap(), current_note) }).collect::<Vec<Node<Msg>>>(),
-                ],
-            ]
-        }).collect::<Vec<Node<Msg>>>()
+        {
+            let mut tag_tree = tag_tree.clone();
+            tag_tree.sort_by(|a, b| a.name.cmp(&b.name));
+            
+            tag_tree.iter().map(|tag| {
+                li![
+                    IF![!tag_tree_folds.get(&tag.id).unwrap_or(&true) => C!["tree-closed"]],
+                    button![
+                        C!["focus:outline-none"],
+                        &tag.name,
+                        ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
+                        ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
+                    ],
+                    tag_tree_view(&tag.children, tag_tree_folds, notes, current_note),
+                    ul![
+                        {
+                            let mut tag_notes = tag.notes.clone();
+                            tag_notes.sort_by(|a, b| {
+                                let a = notes.get(a).unwrap().name.clone();
+                                let b = notes.get(b).unwrap().name.clone();
+                                a.cmp(&b)
+                            });
+                            tag_notes.iter().map(|uuid| { note_item_view(*uuid, notes.get(&uuid).unwrap(), current_note) }).collect::<Vec<Node<Msg>>>()
+                        },
+                    ],
+                ]
+            }).collect::<Vec<Node<Msg>>>()
+        }
     ]
 }
 
 fn untagged_list_view(model: &Model) -> Node<Msg> {
+    let mut notes = model.untagged_notes.clone();
+    notes.sort_by(|a, b| {
+        let a = model.notes.get(a).unwrap().name.clone();
+        let b = model.notes.get(b).unwrap().name.clone();
+        a.cmp(&b)
+    });
     ul![
-        model.untagged_notes.iter().map(|uuid| { note_item_view(*uuid, model.notes.get(&uuid).unwrap(), &model.current_note) }).collect::<Vec<Node<Msg>>>()
+      notes.iter().map(|uuid| { note_item_view(*uuid, model.notes.get(&uuid).unwrap(), &model.current_note) }).collect::<Vec<Node<Msg>>>()
     ]
 }
 
