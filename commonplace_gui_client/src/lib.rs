@@ -79,7 +79,7 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
             }
         },
         Msg::ToggleTag(uuid) => {
-            *model.tag_tree_folds.entry(uuid).or_insert(true) ^= true;
+            *model.tag_tree_folds.entry(uuid).or_insert(false) ^= true;
         },
         Msg::OpenNote(note) => {
             if model.note_dirty {
@@ -393,7 +393,7 @@ fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<TagId, bool>,
             
             tag_tree.iter().map(|tag| {
                 li![
-                    IF![!tag_tree_folds.get(&tag.id).unwrap_or(&true) => C!["tree-closed"]],
+                    IF![!tag_tree_folds.get(&tag.id).unwrap_or(&false) => C!["tree-closed"]],
                     div![
                         C!["flex", "tagtree-row"],
                         button![

@@ -1,11 +1,12 @@
 use rouille::{Request, Response};
-use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid, untag_note_by_uuid, create_tag, delete_tag_by_uuid};
+use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid, untag_note_by_uuid, create_tag, delete_tag_by_uuid, blobstore_get};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
 use std::str::FromStr;
 use std::io::Read;
 use std::path::PathBuf;
+use std::convert::TryInto;
 
 #[derive(RustEmbed)]
 #[folder = "../commonplace_gui_client/static/"]
@@ -36,7 +37,11 @@ fn handle_get_blob(hash: &str) -> Response {
     if !hash.chars().all(|c| (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))  {
         return Response::empty_404();
     }
-    if let Ok(contents) = std::fs::read(hash) {
+    let hash_bytes = hex::decode(hash).unwrap();
+    let hash_array: [u8; blake3::OUT_LEN] = hash_bytes[..].try_into().unwrap();
+    let hash: blake3::Hash = hash_array.into();
+    let db = open_db().unwrap();
+    if let Ok(contents) = blobstore_get(&db, hash) {
         Response::from_data("application/octet-stream", contents)
     } else {
         Response::empty_404()

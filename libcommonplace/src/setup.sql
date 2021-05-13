@@ -21,6 +21,11 @@ CREATE TABLE Notes(
 	mimetype TEXT NOT NULL
 );
 
+CREATE TABLE Blobs(
+  hash BLOB PRIMARY KEY NOT NULL, -- blake3
+  contents BLOB NOT NULL
+);
+
 CREATE TABLE TagMap(
 	note_id BLOB NOT NULL,
 	tag_id BLOB NOT NULL,

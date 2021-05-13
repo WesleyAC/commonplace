@@ -59,7 +59,6 @@ One cannot escape conflict completely, unfortunately — however, building on to
 * Save note rename on enter press
 * Canonicalize tags (if tagged with `misc>foo` and `misc`, only show most specific tag)
 * Expand left sidebar tag on right sidebar tag click
-* Switch to using sqlite for blob storage
 * Add "plain"text import/export
 * Support for images
 * Support for PDFs
