@@ -54,6 +54,7 @@ enum Msg {
     RenameNote((Option<NoteId>, String)),
     AddTagToNote((NoteId, TagId)),
     UntagNote((NoteId, TagId)),
+    CreateTag(Vec<String>),
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
@@ -117,6 +118,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::UntagNote((note, tag)) => {
             orders.skip().perform_cmd(async move {
                 untag_note(note, tag).await;
+                Msg::RequestUpdateTagTree
+            });
+        }
+        Msg::CreateTag(tag_name) => {
+            orders.skip().perform_cmd(async move {
+                create_tag(tag_name).await;
                 Msg::RequestUpdateTagTree
             });
         }
@@ -226,6 +233,17 @@ async fn untag_note(note: NoteId, tag: TagId) -> Result<(), ()> {
     Ok(())
 }
 
+async fn create_tag(tag_name: Vec<String>) -> Result<(), ()> {
+    let bytes = Request::new("/api/tag/new")
+        .method(Method::Post)
+        .body(serde_json::to_string(&tag_name).unwrap().into())
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?
+        .bytes().map_err(|e| { log!(e) }).await?;
+    Ok(())
+}
+
 async fn new_note() -> Result<NoteId, ()> {
     let bytes = Request::new("/api/note/new")
         .method(Method::Post)
@@ -260,11 +278,28 @@ fn view(model: &Model) -> Node<Msg> {
             ],
             IF![
                 model.tag_tree.is_some() && model.sidebar_tab == SidebarTab::TagTree =>
-                tag_tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes, &model.current_note)
+                div![
+                    tag_tree_view(model.tag_tree.as_ref().unwrap(), &model.tag_tree_folds, &model.notes, &model.current_note),
+                    input![
+                        C!["w-full"],
+                        attrs!{
+                            At::Type => "text",
+                            At::Placeholder => "Create new tag",
+                        },
+                        keyboard_ev(Ev::KeyDown, enc!(() move |event| {
+                            if event.key() == "Enter" {
+                                let tag_name = to_input(&event.current_target().unwrap()).value().split(">").map(|x| x.to_string()).collect();
+                                Some(Msg::CreateTag(tag_name))
+                            } else {
+                                None
+                            }
+                        })),
+                    ]
+                ]
             ],
             IF![
                 model.sidebar_tab == SidebarTab::Untagged =>
-                untagged_list_view(&model)
+                div![untagged_list_view(&model)]
             ],
         ],
         div![
@@ -304,7 +339,7 @@ fn view(model: &Model) -> Node<Msg> {
                     C!["w-full"],
                     attrs!{
                         At::Type => "text",
-                        At::Placeholder => "Add tag",
+                        At::Placeholder => "Add tag to note",
                     },
                     keyboard_ev(Ev::KeyDown, enc!((
                         model.current_note => note,

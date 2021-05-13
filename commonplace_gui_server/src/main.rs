@@ -1,5 +1,5 @@
 use rouille::{Request, Response};
-use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid, untag_note_by_uuid};
+use libcommonplace::{NoteId, TagId, Note, add_note, open_db, get_all_notes, get_untagged_notes, get_tag_tree, rename_note, update_note_bytes, tag_note_by_uuid, untag_note_by_uuid, create_tag};
 use rust_embed::RustEmbed;
 use uuid::Uuid;
 use rusqlite::params;
@@ -110,6 +110,15 @@ fn handle_new_note() -> Response {
     }
 }
 
+fn handle_new_tag(tag_name: Vec<String>) -> Response {
+    let db = open_db().unwrap();
+    if let Ok(uuid) = create_tag(&db, tag_name) {
+        Response::empty_204()
+    } else {
+        Response::empty_404()
+    }
+}
+
 fn handle_note_add_tag(note_id: &str, tag_id: &str) -> Response {
     let db = open_db().unwrap();
     let note_id = Uuid::from_str(note_id);
@@ -148,6 +157,16 @@ fn main() {
             ("GET", &["api", "blob", hash]) => handle_get_blob(hash),
             ("GET", &["api", "note", uuid]) => handle_get_note(uuid),
             ("GET", path) => handle_static(path.join("/")),
+            ("POST", &["api", "tag", "new"]) => {
+                let mut body = vec![];
+                request.data().unwrap().read_to_end(&mut body);
+                let tag_name = serde_json::from_slice(&body);
+                if let Ok(tag_name) = tag_name {
+                    handle_new_tag(tag_name)
+                } else {
+                    Response::empty_404()
+                }
+            },
             ("POST", &["api", "note", "new"]) => handle_new_note(),
             ("POST", &["api", "note", note_id, "tag", tag_id]) => handle_note_add_tag(note_id, tag_id),
             ("POST", &["api", "note", uuid, "rename"]) => {
