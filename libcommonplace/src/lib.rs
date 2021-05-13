@@ -174,6 +174,12 @@ pub fn create_tag(db: &Connection, tag: Vec<String>) -> Result<(), CommonplaceEr
     Ok(())
 }
 
+pub fn delete_tag_by_uuid(db: &Connection, tag_id: Uuid) -> Result<(), CommonplaceError> {
+    db.execute("DELETE FROM Tags WHERE id = ?1", params![tag_id])?;
+
+    Ok(())
+}
+
 pub fn delete_tag(db: &Connection, tag: Vec<String>) -> Result<(), CommonplaceError> {
     let id = get_tag_id_by_name(db, tag)?;
     db.execute("DELETE FROM Tags WHERE id = ?1", params![id])?;

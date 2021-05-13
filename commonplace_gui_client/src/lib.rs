@@ -55,6 +55,7 @@ enum Msg {
     AddTagToNote((NoteId, TagId)),
     UntagNote((NoteId, TagId)),
     CreateTag(Vec<String>),
+    DeleteTag(TagId),
     KeyPressed(web_sys::KeyboardEvent),
     UpdateNoteText(String),
     SaveNote,
@@ -124,6 +125,12 @@ fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg>) {
         Msg::CreateTag(tag_name) => {
             orders.skip().perform_cmd(async move {
                 create_tag(tag_name).await;
+                Msg::RequestUpdateTagTree
+            });
+        }
+        Msg::DeleteTag(tag_id) => {
+            orders.skip().perform_cmd(async move {
+                delete_tag(tag_id).await;
                 Msg::RequestUpdateTagTree
             });
         }
@@ -241,6 +248,15 @@ async fn create_tag(tag_name: Vec<String>) -> Result<(), ()> {
         .await.map_err(|e| { log!(e); })?
         .check_status().map_err(|e| { log!(e); })?
         .bytes().map_err(|e| { log!(e) }).await?;
+    Ok(())
+}
+
+async fn delete_tag(tag: TagId) -> Result<(), ()> {
+    Request::new(format!("/api/tag/{}", tag))
+        .method(Method::Delete)
+        .fetch()
+        .await.map_err(|e| { log!(e); })?
+        .check_status().map_err(|e| { log!(e); })?;
     Ok(())
 }
 
@@ -378,11 +394,19 @@ fn tag_tree_view(tag_tree: &Vec<TagTree>, tag_tree_folds: &HashMap<TagId, bool>,
             tag_tree.iter().map(|tag| {
                 li![
                     IF![!tag_tree_folds.get(&tag.id).unwrap_or(&true) => C!["tree-closed"]],
-                    button![
-                        C!["focus:outline-none"],
-                        &tag.name,
-                        ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
-                        ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
+                    div![
+                        C!["flex", "tagtree-row"],
+                        button![
+                            C!["focus:outline-none"],
+                            &tag.name,
+                            ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::ToggleTag(id))),
+                            ev(Ev::DblClick, enc!((&tag.id => id) move |_| log!("dblclick", id))),
+                        ],
+                        button![
+                            C!["focus:outline-none", "ml-auto", "hidden"],
+                            "[-]",
+                            ev(Ev::Click, enc!((&tag.id => id) move |_| Msg::DeleteTag(id))),
+                        ]
                     ],
                     tag_tree_view(&tag.children, tag_tree_folds, notes, current_note),
                     ul![

@@ -22,6 +22,10 @@
 	list-style: none;
 }
 
+#left-sidebar .tagtree-row:hover > button {
+	display: block;
+}
+
 #editor > div[data-slate-editor='true'] {
 	height: 100%;
 }

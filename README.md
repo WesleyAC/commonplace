@@ -6,7 +6,6 @@ If you're a member of the [Recurse Center](https://www.recurse.com/scout/click?t
 
 ## TODO
 
-* Add ability to delete tags
 * Autosave with timer
 * Save note rename on enter press
 * Canonicalize tags (if tagged with `misc>foo` and `misc`, only show most specific tag)
