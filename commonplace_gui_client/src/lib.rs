@@ -324,7 +324,7 @@ fn view(model: &Model) -> Node<Msg> {
                         ],
                         button![
                             C!["ml-auto"],
-                            "(untag)",
+                            "[-]",
                             ev(Ev::Click, enc!((model.current_note => note, tag) move |_event| {
                                 if let Some(note) = note {
                                     Some(Msg::UntagNote((note, tag)))
