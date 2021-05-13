@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::fs;
-use std::fs::File;
-use std::io::Write;
 use rusqlite::params;
 use uuid::Uuid;
 pub use libcommonplace_types::{TagId, NoteId, TagRow, TagTree, Note};
