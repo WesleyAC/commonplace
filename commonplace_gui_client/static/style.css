@@ -22,6 +22,10 @@
 	list-style: none;
 }
 
+#editor > div[data-slate-editor='true'] {
+	height: 100%;
+}
+
 #right-sidebar {
   width: 24rem;
 }
