@@ -7,6 +7,12 @@ If you're a member of the [Recurse Center](https://www.recurse.com/scout/click?t
 ## TODO
 
 * Add ability to delete tags
+* Alphabetize tag tree
+* Autosave with timer
+* Save note rename on enter press
 * Canonicalize tags (if tagged with `misc>foo` and `misc`, only show most specific tag)
+* Expand left sidebar tag on right sidebar tag click
 * Switch to using sqlite for blob storage
-* Add markdown export (+import?)
+* Add "plain"text import/export
+* Support for images
+* Support for PDFs
