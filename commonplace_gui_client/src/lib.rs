@@ -288,7 +288,11 @@ fn view(model: &Model) -> Node<Msg> {
                         },
                         keyboard_ev(Ev::KeyDown, enc!(() move |event| {
                             if event.key() == "Enter" {
-                                let tag_name = to_input(&event.current_target().unwrap()).value().split(">").map(|x| x.to_string()).collect();
+                                let target = event.current_target().unwrap();
+                                let input_elem = to_input(&target);
+                                let tag_name = input_elem.value().split(">").map(|x| x.to_string()).collect();
+                                input_elem.set_value("");
+
                                 Some(Msg::CreateTag(tag_name))
                             } else {
                                 None
@@ -346,7 +350,11 @@ fn view(model: &Model) -> Node<Msg> {
                         model.tag_tree => tag_tree,
                     ) move |event| {
                         if event.key() == "Enter" {
-                            let tag = get_tag_by_full_name(&tag_tree.unwrap(), to_input(&event.current_target().unwrap()).value().split(">").collect());
+                            let target = event.current_target().unwrap();
+                            let input_elem = to_input(&target);
+                            let tag = get_tag_by_full_name(&tag_tree.unwrap(), input_elem.value().split(">").collect());
+                            input_elem.set_value("");
+
                             if let Some(note) = note {
                                 if let Some(tag) = tag {
                                     return Some(Msg::AddTagToNote((note, tag)))
