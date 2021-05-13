@@ -1,7 +1,9 @@
 use structopt::StructOpt;
 use std::path::PathBuf;
 use uuid::Uuid;
-use libcommonplace::{open_db, init_memex, add_note, update_note, rename_note, create_tag, delete_tag, tag_note, untag_note, get_tag_tree, CommonplaceError};
+use walkdir::WalkDir;
+
+use libcommonplace::{open_db, init_memex, add_note, update_note, rename_note, create_tag, delete_tag, tag_note, untag_note, get_tag_tree, CommonplaceError, Connection};
 
 #[derive(Debug)]
 struct TagList(Vec<String>);
@@ -16,7 +18,10 @@ fn parse_taglist(s: &str) -> TagList {
 
 #[derive(StructOpt)]
 enum Cmdline {
-    Init {},
+    Init {
+        #[structopt(parse(from_os_str))]
+        directory: Option<PathBuf>,
+    },
     ShowTree {},
     AddNote {
         name: String,
@@ -52,13 +57,44 @@ enum Cmdline {
     },
 }
 
+fn import_directory(db: &Connection, directory: PathBuf) {
+    std::env::set_current_dir(directory).unwrap();
+    for entry in WalkDir::new(".") {
+        let entry = entry.unwrap();
+        let path = entry.path();
+        let mut components = path.components().filter_map(|x| {
+            match x {
+                std::path::Component::Normal(c) => Some(String::from(c.to_str().unwrap())),
+                _ => None,
+            }
+        }).collect::<Vec<String>>();
+
+        if components.len() > 0 && !components.first().unwrap().starts_with(".") {
+            if path.is_dir() {
+                create_tag(db, components).unwrap();
+            } else {
+                let name = components.pop().unwrap();
+                let note = add_note(db, name, path.to_path_buf()).unwrap();
+                if components.len() > 0 {
+                    tag_note(db, note, components).unwrap();
+                }
+            }
+        }
+    }
+}
+
 fn main() -> Result<(), CommonplaceError> {
     let cmdline = Cmdline::from_args();
 
     let db = open_db()?;
 
     match cmdline {
-        Cmdline::Init {} => init_memex(&db)?,
+        Cmdline::Init { directory } => {
+            init_memex(&db)?;
+            if let Some(directory) = directory {
+                import_directory(&db, directory);
+            }
+        },
         Cmdline::ShowTree {} => { for tree in get_tag_tree(&db)? { println!("{}", tree); } },
         Cmdline::AddNote { name, filename } => { println!("{}", add_note(&db, name, filename)?); },
         Cmdline::UpdateNote { note, filename } => update_note(&db, note, filename)?,

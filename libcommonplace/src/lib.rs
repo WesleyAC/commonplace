@@ -116,7 +116,7 @@ pub fn add_file_to_blobstore(db: &Connection, filename: PathBuf) -> Result<blake
     let data = fs::read(filename).unwrap();
     let hash = blake3::hash(&data);
     db.execute(
-        "INSERT INTO Blobs (hash, contents) VALUES (?1, ?2)",
+        "INSERT OR IGNORE INTO Blobs (hash, contents) VALUES (?1, ?2)",
         params![hash.as_bytes().to_vec(), data]
     )?;
     Ok(hash)
@@ -125,7 +125,7 @@ pub fn add_file_to_blobstore(db: &Connection, filename: PathBuf) -> Result<blake
 pub fn add_bytes_to_blobstore(db: &Connection, contents: Vec<u8>) -> Result<blake3::Hash, CommonplaceError> {
     let hash = blake3::hash(&contents);
     db.execute(
-        "INSERT INTO Blobs (hash, contents) VALUES (?1, ?2)",
+        "INSERT OR IGNORE INTO Blobs (hash, contents) VALUES (?1, ?2)",
         params![hash.as_bytes().to_vec(), contents]
     )?;
     Ok(hash)

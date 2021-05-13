@@ -8,3 +8,4 @@ edition = "2018"
 libcommonplace = { path = "../libcommonplace" }
 structopt = "0.3.19"
 uuid = { version = "0.8.1", features = [ "v4" ] }
+walkdir = "2"

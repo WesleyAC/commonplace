@@ -220,6 +220,7 @@ dependencies = [
  "libcommonplace",
  "structopt",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
