@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::fs;
+use std::convert::TryInto;
 use rusqlite::params;
 use uuid::Uuid;
 pub use libcommonplace_types::{TagId, NoteId, TagRow, TagTree, Note};
@@ -137,6 +138,22 @@ pub fn blobstore_get(db: &Connection, hash: blake3::Hash) -> Result<Vec<u8>, Com
         params![hash.as_bytes().to_vec()],
         |row| row.get("contents")
     )?)
+}
+
+pub fn get_note_contents(db: &Connection, note_id: Uuid) -> Result<Vec<u8>, CommonplaceError> {
+    Ok(db.query_row(
+        "SELECT contents FROM Blobs LEFT JOIN Notes ON Blobs.hash = Notes.hash WHERE Notes.id = ?1",
+        params![note_id],
+        |row| row.get("contents")
+    )?)
+}
+
+pub fn get_note_size(db: &Connection, note_id: Uuid) -> Result<u64, CommonplaceError> {
+    Ok(db.query_row(
+        "SELECT length(contents) AS len FROM Blobs LEFT JOIN Notes ON Blobs.hash = Notes.hash WHERE Notes.id = ?1",
+        params![note_id],
+        |row| row.get::<&str, i64>("len")
+    )?.try_into().unwrap())
 }
 
 pub fn open_db() -> Result<Connection, CommonplaceError> {

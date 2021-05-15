@@ -1,0 +1,13 @@
+[package]
+name = "commonplace-fuse"
+version = "0.0.0"
+authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
+edition = "2018"
+
+[dependencies]
+libcommonplace = { path = "../libcommonplace" }
+libcommonplace_types = { path = "../libcommonplace/types" }
+fuser = "0.7"
+libc = "0.2.51"
+uuid = { version = "0.8.1", features = [ "v4", "serde" ] }
+bimap = "0.6"

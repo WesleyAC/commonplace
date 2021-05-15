@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["libcommonplace", "cli", "gui_server", "gui_client"]
+members = ["libcommonplace", "cli", "gui_server", "gui_client", "fuse"]
 
 [profile.release]
 lto = true

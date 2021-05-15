@@ -1,6 +1,7 @@
 use std::fmt;
 use uuid::Uuid;
 use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(transparent)]
@@ -49,6 +50,12 @@ pub struct Note {
     pub mimetype: String,
 }
 
+#[derive(Debug, Clone)]
+pub enum NoteOrTag<'a> {
+    Note(&'a Note),
+    Tag(&'a TagTree),
+}
+
 impl From<&TagRow> for TagTree {
     fn from(tag_row: &TagRow) -> Self {
         TagTree {
@@ -74,6 +81,45 @@ impl fmt::Display for TagTree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.pretty_print(f, 0)
     }
+}
+
+pub fn get_by_uuid<'a>(tag_tree: &'a Vec<TagTree>, notes: &'a HashMap<Uuid, Note>, uuid: Uuid) -> Option<NoteOrTag<'a>> {
+    if let Some(note) = notes.get(&uuid) {
+        return Some(NoteOrTag::Note(&note));
+    }
+    for tree in tag_tree {
+        if tree.id.uuid == uuid {
+            return Some(NoteOrTag::Tag(&tree));
+        }
+        if let Some(ret) = get_by_uuid(&tree.children, notes, uuid) {
+            return Some(ret);
+        }
+    }
+    None
+}
+
+pub fn get_by_full_name<'a>(tag_tree: &'a Vec<TagTree>, notes: &'a HashMap<Uuid, Note>, name: Vec<String>) -> Option<NoteOrTag<'a>> {
+    if let Some((head, tail)) = name.split_first() {
+        for tag_tree in tag_tree {
+            if tail.len() == 0 {
+                for note_id in &tag_tree.notes {
+                    if let Some(note) = notes.get(&note_id.uuid) {
+                        if &note.name == head {
+                            return Some(NoteOrTag::Note(&note));
+                        }
+                    }
+                }
+            }
+            if &tag_tree.name == head {
+                if tail.len() == 0 {
+                    return Some(NoteOrTag::Tag(&tag_tree));
+                } else {
+                    return get_by_full_name(&tag_tree.children, notes, tail.to_vec())
+                }
+            }
+        }
+    }
+    None
 }
 
 pub fn get_tags_for_note(tag_tree: &Vec<TagTree>, note: &NoteId) -> Vec<TagId> {
