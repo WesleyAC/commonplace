@@ -65,7 +65,6 @@ One cannot escape conflict completely, unfortunately — however, building on to
 * Save note rename on enter press
 * Canonicalize tags (if tagged with `misc>foo` and `misc`, only show most specific tag)
 * Expand left sidebar tag on right sidebar tag click
-* Add "plain"text export
 * Support for images
 * Support for PDFs
 * Add random color to every note
