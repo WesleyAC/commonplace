@@ -164,8 +164,17 @@ pub fn add_note(db: &Connection, name: String, filename: PathBuf) -> Result<Uuid
     // TODO: check that file doesn't exist
 
     let id = Uuid::new_v4();
-    let hash = add_file_to_blobstore(db, filename)?.as_bytes().to_vec();
-    let mimetype = "application/octet-stream";
+    let hash = add_file_to_blobstore(db, filename.clone())?.as_bytes().to_vec();
+    let mimetype = match filename.to_string_lossy().split(".").last() {
+        Some("md") => "text/markdown",
+        Some("txt") => "text/plain",
+        Some("pdf") => "application/pdf",
+        Some("png") => "image/png",
+        Some("jpeg") => "image/jpeg",
+        Some("jpg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        _ => "application/octet-stream",
+    };
 
     db.execute(
         "INSERT INTO Notes (id, hash, name, mimetype) VALUES (?1, ?2, ?3, ?4)",
