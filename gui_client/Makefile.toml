@@ -14,4 +14,4 @@ args = ["build", "--target", "web", "--out-dir", "static/wasm/", "--out-name", "
 description = "Build with wasm-pack in release mode"
 install_crate = { crate_name = "wasm-pack", binary = "wasm-pack", test_arg = "-V" }
 command = "wasm-pack"
-args = ["build", "--target", "web", "--out-dir", "static/wasm/", "--out-name", "package"]
+args = ["build", "--target", "web", "--out-dir", "static/wasm/", "--out-name", "package", "--release"]
