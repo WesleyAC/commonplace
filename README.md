@@ -63,3 +63,4 @@ One cannot escape conflict completely, unfortunately — however, building on to
 * Support for images
 * Support for PDFs
 * Add random color to every note
+* Switch to using a root uuid rather than Vec<TagTree>
