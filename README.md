@@ -2,6 +2,12 @@
 
 Commonplace is a notetaking program. It is a work in progress, I don't recommend that anyone attempt use it right now.
 
+Currently, this repo contains:
+
+* `commonplace-cli`: A CLI tool for viewing and editing a commonplace repo.
+* `commonplace-gui`: A GUI tool for viewing and editing a commonplace repo, built as a web UI with [Seed](https://seed-rs.org/).
+* `commonplace-fuse`: A fuse filesystem that exposes a readonly view of a commonplace repo, allowing use of tools like ripgrep/etc.
+
 If you're a member of the [Recurse Center](https://www.recurse.com/scout/click?t=288aaf8d6ddfba372520ec10690a1e1b) community, you can follow along with development on Zulip in the [#knowledge systems > wesleyac notes system](https://recurse.zulipchat.com/#narrow/stream/260383-knowledge-systems/topic/wesleyac.20notes.20system) topic, or if you're a member of my personal Zulip community, you can follow along in the [#projects > commonplace](https://wesleyac.zulipchat.com/#narrow/stream/282766-projects/topic/commonplace) topic.
 
 ## Philosophy
