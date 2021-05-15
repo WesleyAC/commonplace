@@ -1,5 +1,5 @@
 [package]
-name = "commonplace_cli"
+name = "commonplace-cli"
 version = "0.0.0"
 authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
 edition = "2018"

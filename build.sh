@@ -22,10 +22,10 @@ cd $BASE_DIR
 
 set -ex
 
-cd $BASE_DIR/commonplace_gui_client
+cd $BASE_DIR/gui_client
 cargo make $BUILD_MODE
 
-cd $BASE_DIR/commonplace_gui_server
+cd $BASE_DIR/gui_server
 cargo +nightly build $BUILD_MODE_FLAG
 
 cd $BASE_DIR

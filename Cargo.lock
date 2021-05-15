@@ -214,13 +214,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "commonplace_cli"
+name = "commonplace-cli"
 version = "0.0.0"
 dependencies = [
  "libcommonplace",
  "structopt",
  "uuid",
  "walkdir",
+]
+
+[[package]]
+name = "commonplace-gui"
+version = "0.0.0"
+dependencies = [
+ "blake3",
+ "hex",
+ "libcommonplace",
+ "rouille",
+ "rusqlite",
+ "rust-embed",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]
@@ -235,20 +249,6 @@ dependencies = [
  "serde_json",
  "uuid",
  "wasm-bindgen-test",
-]
-
-[[package]]
-name = "commonplace_gui_server"
-version = "0.0.0"
-dependencies = [
- "blake3",
- "hex",
- "libcommonplace",
- "rouille",
- "rusqlite",
- "rust-embed",
- "serde_json",
- "uuid",
 ]
 
 [[package]]

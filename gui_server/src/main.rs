@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::convert::TryInto;
 
 #[derive(RustEmbed)]
-#[folder = "../commonplace_gui_client/static/"]
+#[folder = "../gui_client/static/"]
 struct StaticFiles;
 
 fn handle_static(path: String) -> Response {

@@ -1,5 +1,5 @@
 [package]
-name = "commonplace_gui_server"
+name = "commonplace-gui"
 version = "0.0.0"
 authors = ["Wesley Aptekar-Cassels <me@wesleyac.com>"]
 edition = "2018"
