@@ -59,6 +59,17 @@ Notes and tags are both referenced by UUID, which avoids conflicts when creating
 
 One cannot escape conflict completely, unfortunately — however, building on top of a content addressable and UUID based system allows for the underlying data synchronization to be trivial, making presentation of conflicts a purely UI concern. Last-write-wins is simple to implement, and more complex merge resolution systems can be added later without changing the fundamental architecture.
 
+# Getting Started
+
+**⚠️⚠️DID YOU READ THE PART ABOVE WHERE I TOLD YOU NOT TO USE THIS SOFTWARE?⚠️⚠️**
+
+```
+cargo run --release --bin commonplace-cli init /path/to/a/directory/with/text/files/
+# You should now have a "index.db" file in your current directory
+./run.sh --release # Requires chromium, and probably other things
+cargo run --release --bin commonplace-fuse /path/to/fuse/mountpoint/ # Optional
+```
+
 # TODOs
 
 * Autosave with timer
